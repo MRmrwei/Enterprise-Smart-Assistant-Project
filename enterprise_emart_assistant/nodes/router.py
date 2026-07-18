@@ -1,8 +1,9 @@
 
 
 from graphs.state import AgentState
+from langgraph.types import Command
 
 
 def route_node(state: AgentState):
-    print(f"run route_node")
-    return state
+    
+    return Command(goto="fill_form")
