@@ -41,7 +41,7 @@ async def intention_node(state: AgentState):
     res = await intention_llm().ainvoke(
         [SystemMessage(INTENTION_SYSTEM_PROMPT), message]
     )
-
+    print(f"意图识别结果：{res.content}")
     intentions = json.loads(res.content)
     
     intentions = state.get("intentions", {})

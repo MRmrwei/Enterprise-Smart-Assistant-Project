@@ -8,6 +8,7 @@ dependencies = [
     "langchain-core>=1.4.9",
     "langchain-deepseek>=1.1.0",
     "langchain-openai>=1.3.5",
+    "langchain-skills-adapters>=0.1.6",
     "langgraph>=1.2.9",
     "load-dotenv>=0.1.0",
 ]

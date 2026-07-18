@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
+from langchain_skills_adapters import SkillsTool
 
-
+form_skills = SkillsTool(skills_path="./skills/form/")
 @tool
 def leave_request(
     response: str, leave_type: str, start_date: str, end_date: str, day_num: float

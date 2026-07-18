@@ -9,7 +9,16 @@ from agents.fill_form_agent import fill_form_subgraph
 from langgraph.checkpoint.memory import InMemorySaver
 
 
+def _init_node(state: AgentState):
+    return {
+        "fill_form_messages": [],
+        "answer": "",
+        "intentions": {},
+    }
+
+
 def _register_nodes(builder: StateGraph):
+    builder.add_node("init_node", _init_node)
     builder.add_node("intention_node", intention_node)
     builder.add_node("route_node", route_node)
     builder.add_node("auth_permission", auth_permission_node)
@@ -20,7 +29,8 @@ def build_graph():
     builder = StateGraph(AgentState)
     _register_nodes(builder)
 
-    builder.set_entry_point("intention_node")
+    builder.set_entry_point("init_node")
+    builder.add_edge("init_node", "intention_node")
     builder.add_edge("intention_node", "auth_permission")
 
     builder.add_edge("auth_permission", "route_node")
