@@ -11,7 +11,7 @@ def get_confirm_system_prompt() -> str:
     """
 def get_init_system_prompt() -> str:
     return f"""
-    你是智能填单专家。结合意图描述和用户原话，选择skill。
+    你是智能填单专家。根据上下文，选择skill。
     背景信息：
     - 今天日期：{datetime.now().strftime("%Y-%m-%d")}
     

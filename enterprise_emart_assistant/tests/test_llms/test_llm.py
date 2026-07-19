@@ -2,7 +2,10 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel
 
 from llms.factory import get_default_llm, get_llm
+from nodes.intention import INTENTION_SYSTEM_PROMPT, intention_llm
+from prompts.intention import get_intention_system_prompt
 from pydantics.decision import AIDecision
+from pydantics.intentions import Intention
 
 
 def test_llm():
@@ -86,3 +89,11 @@ def test_message():
         ]
     )
     print(llm)
+
+
+def test_intention():
+    res:Intention = intention_llm().invoke(
+        [SystemMessage(get_intention_system_prompt()), HumanMessage(content="我出差去了北京谈客户用了3600，帮我报销")]
+    )
+    print(res)
+    

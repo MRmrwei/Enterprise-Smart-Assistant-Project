@@ -1,12 +1,14 @@
 from langgraph.graph import StateGraph
 
 from graphs.state import AgentState
-
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from nodes.router import route_node
 from nodes.intention import intention_node
 from nodes.auth import auth_permission_node
 from agents.fill_form_agent import fill_form_subgraph
 from langgraph.checkpoint.memory import InMemorySaver
+
+from pydantics.intentions import Intention
 
 
 def _init_node(state: AgentState):
@@ -35,7 +37,13 @@ def build_graph():
 
     builder.add_edge("auth_permission", "route_node")
 
-    return builder.compile(checkpointer=InMemorySaver())
+    # ✅ 创建带允许列表的序列化器
+    serde = JsonPlusSerializer(allowed_msgpack_modules=[Intention])
+
+    # ✅ 使用自定义序列化器初始化 checkpointer
+    checkpointer = InMemorySaver(serde=serde)
+
+    return builder.compile(checkpointer=checkpointer)
 
 
 main_graph = build_graph()

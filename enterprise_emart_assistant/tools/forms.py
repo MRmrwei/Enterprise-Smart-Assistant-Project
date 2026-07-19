@@ -2,8 +2,6 @@ from langchain_core.tools import tool
 from langchain_skills_adapters import SkillsTool
 
 
-
-
 @tool
 def leave_request(
     response: str, leave_type: str, start_date: str, end_date: str, day_num: float
@@ -40,7 +38,7 @@ def leave_request(
     return "申请成功"
 
 
-def cancel_leave_request(response: str):
+def cancel_request(response: str):
     """
     填单过程中用户表达取消的意图，请使用该工具
     Args:
@@ -50,10 +48,33 @@ def cancel_leave_request(response: str):
     return f"申请中断，原因：{response}"
 
 
+def reimbursement_request(
+    expense_type: str, expense_amount: float, expense_date: str, expense_reason: str
+):
+    """
+    员工报销申请单
+    
+    Args:
+        expense_type (str): 报销类型，必填。可选值：
+            - "meal"  = 餐饮
+            - "travel"= 差旅
+            - "other" = 其他
+        expense_amount (float): 报销金额，必填。
+        expense_date (str): 报销日期，必填。格式必须为 "YYYY-MM-DD"
+        expense_reason (str): 报销原因，根据用户意图描述和用户原话填写，必填。
+
+    """
+
+    if expense_amount < 0 or expense_amount > 1000:
+        return "申请金额不符合要求，报销失败！"
+
+    return "报销申请成功，等待审批！"
+
 
 leave_skills = SkillsTool(skills_path="./skills/form/")
 
 # leave_skills.verbose = True
 form_skills = [leave_skills]
-leave_tools = [leave_request, cancel_leave_request]
-form_all_tools = leave_tools
+leave_tools = [leave_request]
+reimbursement_tools = [reimbursement_request]
+form_all_tools = leave_tools + [cancel_request] + reimbursement_tools

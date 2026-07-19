@@ -10,6 +10,7 @@ from prompts.fill_form import (
     get_init_system_prompt,
 )
 from pydantics.decision import AIDecision
+from pydantics.intentions import Intention
 from tools.forms import form_all_tools, form_skills
 
 """
@@ -23,19 +24,27 @@ llm_with_decision = get_default_llm().with_structured_output(
 )
 
 
+def extract_info(intentions: Intention | None = None) -> str:
+    """
+    从意图中提取信息
+    """
+    if intentions is None:
+        return ""
+    origin_input = intentions.origin_input
+    description = intentions.description
+    vital_content = intentions.vital_content
+
+    return f"\n意图描述：{description}\n用户原话：{origin_input}\n重要信息：{vital_content}"
+
+
 async def form_init_node(state: AgentState):
     """填单节点初始化"""
     # print(f"state = {state}")
 
-    origin_input = state.get("intentions", {}).get("origin_input")
-    description = state.get("intentions", {}).get("description")
+    intentions: Intention = state.get("intentions", None)
 
     message = await llm_with_tools.ainvoke(
-        [
-            SystemMessage(
-                content=f"{get_init_system_prompt()}\n意图描述：{description}\n用户原话：{origin_input}"
-            ),
-        ]
+        [SystemMessage(content=f"{get_init_system_prompt()}{extract_info(intentions)}")]
     )
 
     return {"fill_form_messages": [message]}
@@ -45,11 +54,15 @@ async def form_create_node(state: AgentState):
     """
     填单草稿创建节点
     """
-    messages = [SystemMessage(content=get_confirm_system_prompt())] + state.get(
-        "fill_form_messages", []
-    )
-    message = await llm_with_tools.ainvoke(messages)
+    intentions: Intention = state.get("intentions", None)
+    mes = state.get("fill_form_messages", [])
 
+    messages = [
+        SystemMessage(
+            content=f"{get_confirm_system_prompt()}{extract_info(intentions)}"
+        )
+    ] + state.get("fill_form_messages", [])
+    message = await llm_with_tools.ainvoke(messages)
 
     return {"fill_form_messages": [message]}
 

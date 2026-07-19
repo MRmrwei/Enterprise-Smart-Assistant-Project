@@ -5,19 +5,13 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph import MessagesState, add_messages
 
 from enums.roles import Role
+from pydantics.intentions import Intention
 
 
 class AgentState(MessagesState):
-    """
-    intentions: {
-         "origin_input": 用户输入
-         "type": 意图类型
-         "description": 意图描述
-    }
-    """
     role: str | None = ""
     user_id: str | None = None
     answer: str | None = ""
-    intentions: dict[str, str] | None = []
+    intentions: Intention | None = None
     fill_form_messages: Annotated[list[AnyMessage], add_messages]
     pass
