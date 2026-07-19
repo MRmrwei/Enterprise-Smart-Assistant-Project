@@ -37,7 +37,7 @@ def leave_request(
 
     return "申请成功"
 
-
+@tool
 def cancel_request(response: str):
     """
     填单过程中用户表达取消的意图，请使用该工具
@@ -47,7 +47,7 @@ def cancel_request(response: str):
 
     return f"申请中断，原因：{response}"
 
-
+@tool
 def reimbursement_request(
     expense_type: str, expense_amount: float, expense_date: str, expense_reason: str
 ):
