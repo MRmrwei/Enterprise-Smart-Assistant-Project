@@ -1,7 +1,9 @@
 from langchain_core.tools import tool
 from langchain_skills_adapters import SkillsTool
 
-form_skills = SkillsTool(skills_path="./skills/form/")
+
+
+
 @tool
 def leave_request(
     response: str, leave_type: str, start_date: str, end_date: str, day_num: float
@@ -36,3 +38,22 @@ def leave_request(
         return "请假天数不符合要求"
 
     return "申请成功"
+
+
+def cancel_leave_request(response: str):
+    """
+    填单过程中用户表达取消的意图，请使用该工具
+    Args:
+        response (str): 用户取消的原因,根据用户表达填写。如果用户没填请自行根据实际原因填写，必填。
+    """
+
+    return f"申请中断，原因：{response}"
+
+
+
+leave_skills = SkillsTool(skills_path="./skills/form/")
+
+# leave_skills.verbose = True
+form_skills = [leave_skills]
+leave_tools = [leave_request, cancel_leave_request]
+form_all_tools = leave_tools

@@ -17,7 +17,7 @@ INTENTION_SYSTEM_PROMPT = f"""你是一位意图分析专家。请根据用户�
 
 输出格式（严格JSON）：
 {{
-    "intention_type": "意图类型的key",
+    "type": "意图类型的key",
     "description": "意图描述"
 }}
 
@@ -30,7 +30,7 @@ def intention_llm():
     llm = get_default_llm(response_format={"type": "json_object"})
     return llm
 
-    
+
 async def intention_node(state: AgentState):
     """
     意图识别节点
@@ -41,15 +41,14 @@ async def intention_node(state: AgentState):
     res = await intention_llm().ainvoke(
         [SystemMessage(INTENTION_SYSTEM_PROMPT), message]
     )
-    print(f"意图识别结果：{res.content}")
     intentions = json.loads(res.content)
-    
-    intentions = state.get("intentions", {})
-    
 
-    intentions["type"] = intentions.get("intention_type", "unknown")
-    intentions["description"] = intentions.get("description", "")
-    intentions["origin_input"] = message.content
-    state.update({"intentions": intentions})
-    # print(f"意图识别结果：{intentions}")
+    state.update(
+        {
+            "intentions": {
+                "origin_input": message.content,
+                **intentions,
+            }
+        }
+    )
     return state
