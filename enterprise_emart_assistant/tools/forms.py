@@ -73,8 +73,10 @@ def reimbursement_request(
 
 leave_skills = SkillsTool(skills_path="./skills/form/")
 
-# leave_skills.verbose = True
+leave_skills.verbose = True
 form_skills = [leave_skills]
 leave_tools = [leave_request]
 reimbursement_tools = [reimbursement_request]
 form_all_tools = leave_tools + [cancel_request] + reimbursement_tools
+
+form_all_tools_skills = form_all_tools + form_skills

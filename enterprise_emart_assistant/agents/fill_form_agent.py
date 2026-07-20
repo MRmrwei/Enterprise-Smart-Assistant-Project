@@ -1,6 +1,5 @@
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.memory import InMemorySaver
 from graphs.state import AgentState
 from nodes.fill_form import (
     form_create_node,
@@ -11,19 +10,23 @@ from nodes.fill_form import (
     ai_decision,
 )
 from tools.forms import form_skills, form_all_tools
-
-
+from tools.base import tools_container
 def _register_nodes(builder: StateGraph):
     builder.add_node("form_init", form_init_node)
     builder.add_node(
-        "load_skill", ToolNode(form_skills, messages_key="fill_form_messages")
+        "load_skill",
+        ToolNode(
+            tools_container.get_tools(form_skills), messages_key="fill_form_messages"
+        ),
     )
     builder.add_node("form_create", form_create_node)
     builder.add_node("confirm", confirm_node)
     builder.add_node("completed", completed_node)
     builder.add_node(
         "tools",
-        ToolNode(form_all_tools, messages_key="fill_form_messages"),
+        ToolNode(
+            tools_container.get_tools(form_all_tools), messages_key="fill_form_messages"
+        ),
     )
 
 

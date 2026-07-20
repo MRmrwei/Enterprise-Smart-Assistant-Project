@@ -1,11 +1,15 @@
+from operator import le
+
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel
 
 from llms.factory import get_default_llm, get_llm
-from nodes.intention import INTENTION_SYSTEM_PROMPT, intention_llm
+from nodes.intention import intention_llm
 from prompts.intention import get_intention_system_prompt
 from pydantics.decision import AIDecision
 from pydantics.intentions import Intention
+from tools.base import ToolContainer
+from tools.forms import leave_request
 
 
 def test_llm():
@@ -97,3 +101,12 @@ def test_intention():
     )
     print(res)
     
+    
+def test_call_tool():
+    
+    # tools = ToolContainer
+    
+    print(leave_request.__name__)
+    
+    # tools.register_tool(leave_request)
+    # llm = get_default_llm().bind_tools(tools.get_tool("leave_request"))

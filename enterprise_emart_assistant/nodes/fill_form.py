@@ -1,6 +1,7 @@
 from datetime import datetime
+from langchain.messages import ToolMessage
 from langchain_skills_adapters import SkillsTool
-from langgraph.types import interrupt
+from langgraph.types import Command, interrupt
 from langchain_core.messages import HumanMessage, SystemMessage, SystemMessageChunk
 from graphs.state import AgentState
 from llms.factory import get_default_llm
@@ -12,12 +13,14 @@ from prompts.fill_form import (
 from pydantics.decision import AIDecision
 from pydantics.intentions import Intention
 from tools.forms import form_all_tools, form_skills
+from tools.base import tools_container
 
 """
 采用工具加skills进行填单使其更具可维护性和扩展性。后续扩展只需要增加工具和skill即可。
 """
 
-tools = form_all_tools + form_skills
+tools = tools_container.get_tools(form_all_tools + form_skills)
+
 llm_with_tools = get_default_llm().bind_tools(tools, strict=True)
 llm_with_decision = get_default_llm().with_structured_output(
     AIDecision, method="json_mode"
@@ -102,13 +105,19 @@ async def ai_decision(state: AgentState):
     """
     AI决策节点
     """
-
     fill_form_messages = state.get("fill_form_messages", [])
 
     if len(fill_form_messages) < 1:
         return "confirm"
 
     content = "\n".join([m.content for m in fill_form_messages])
+
+    tool_message: ToolMessage = fill_form_messages[-1]
+
+    if tool_message.status == "error":
+        print(f"工具调用错误：{tool_message.content}")
+        return "confirm"
+
     try:
         result: AIDecision = await llm_with_decision.ainvoke(
             [
@@ -118,7 +127,8 @@ async def ai_decision(state: AgentState):
                 ),
             ]
         )
-        print(f"判断结果 = {result}")
+        print(f"AI决策结果：{result}")
         return result.node
     except Exception as e:
+        print(f"AI决策异常：{e}")
         return "confirm"

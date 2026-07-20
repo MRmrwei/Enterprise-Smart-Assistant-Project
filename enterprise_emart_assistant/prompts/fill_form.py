@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 def get_confirm_system_prompt() -> str:
 
     return f"""
@@ -9,6 +10,8 @@ def get_confirm_system_prompt() -> str:
         - 今天日期：{datetime.now().strftime("%Y-%m-%d")}
         
     """
+
+
 def get_init_system_prompt() -> str:
     return f"""
     你是智能填单专家。根据上下文，选择skill。
@@ -16,7 +19,8 @@ def get_init_system_prompt() -> str:
     - 今天日期：{datetime.now().strftime("%Y-%m-%d")}
     
     """
-    
+
+
 def get_decisio_system_prompt() -> str:
     return """
      你是智能流程决策器。根据上下文和工具执行结果，判断当前任务是否已经彻底结束
@@ -28,8 +32,6 @@ def get_decisio_system_prompt() -> str:
         - 工具返回了"校验失败"、"缺少字段"、"格式错误"等需要修改的信息。
         - 用户在提出修改意见、补充数据，或系统正在等待用户输入。
         - 任何不确定的情况，都优先选择 "confirm"（安全优先）。
-
-        请只做判断，不要额外解释，你的输出会被自动解析。
     ## Json 输出格式：
         {
             "node": completed|confirm,

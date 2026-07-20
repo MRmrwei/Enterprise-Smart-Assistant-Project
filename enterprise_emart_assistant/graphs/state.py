@@ -14,4 +14,5 @@ class AgentState(MessagesState):
     answer: str | None = ""
     intentions: Intention | None = None
     fill_form_messages: Annotated[list[AnyMessage], add_messages]
+    knowledge_ingest_messages: Annotated[list[AnyMessage], add_messages]
     pass

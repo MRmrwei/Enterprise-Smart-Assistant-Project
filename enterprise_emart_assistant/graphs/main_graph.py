@@ -6,9 +6,11 @@ from nodes.router import route_node
 from nodes.intention import intention_node
 from nodes.auth import auth_permission_node
 from agents.fill_form_agent import fill_form_subgraph
+from agents.knowledge_ingest_agent import knowledge_ingest_subgraph
 from langgraph.checkpoint.memory import InMemorySaver
-
+from tools.base import tools_container
 from pydantics.intentions import Intention
+
 
 
 def _init_node(state: AgentState):
@@ -25,6 +27,7 @@ def _register_nodes(builder: StateGraph):
     builder.add_node("route_node", route_node)
     builder.add_node("auth_permission", auth_permission_node)
     builder.add_node("fill_form", fill_form_subgraph)
+    builder.add_node("knowledge_ingest", knowledge_ingest_subgraph)
 
 
 def build_graph():

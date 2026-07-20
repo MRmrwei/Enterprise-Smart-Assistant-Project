@@ -10,4 +10,5 @@ class Intention(BaseModel):
 
     description: str = Field(description="意图描述")
     vital_content: str = Field(description="重要信息")
+    file_path: Optional[str] = Field(description="文件路径")
     origin_input: Optional[str] = Field(default="")  # 设为可选，默认空字符串

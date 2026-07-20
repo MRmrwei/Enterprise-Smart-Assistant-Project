@@ -14,12 +14,16 @@ def get_intention_system_prompt() -> str:
             - {Intentions.KNOWLEDGE_INGEST.value}: 文档上传与知识入库
             - {Intentions.DATA_QUERY.value}: 个人数据查询（工资/考勤/报销）
             - {Intentions.UNKNOWN.value}: 一般问答、知识查询、闲聊等
-
+            
+        ## file_path字段的注意事项：
+            - 如果用户输入中没有文件路径和意图不是"{Intentions.KNOWLEDGE_INGEST.value}"请填""。
+            
         ## 输出格式（严格JSON）：
             {{
                 "type": "意图类型的key",
                 "description": "意图描述",
                 "vital_content": "总结出人物，目的，时间等重要的信息"
+                "file_path": 文件路径。
             }}
 
         ## 注意：
