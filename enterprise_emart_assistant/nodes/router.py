@@ -12,13 +12,5 @@ def route_node(state: AgentState):
 
     if intentions is None:
         return Command(goto=END)
-    print(f"意图: {intentions}")
-    return Command(goto=intentions.type)
-  
-    if intentions.type == Intentions.FILL_FORM.value:
-        return Command(goto="fill_form_node")
-  
-    elif intentions.type == Intentions.KNOWLEDGE_INGEST.value:
-        return Command(goto="knowledge_ingest")
-    else:
-        return Command(goto=END)
+    return Command(goto="executor_agent")
+

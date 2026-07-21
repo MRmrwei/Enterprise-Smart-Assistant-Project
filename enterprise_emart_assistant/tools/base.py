@@ -1,4 +1,5 @@
 from functools import singledispatchmethod
+from typing import List
 from langchain.tools import BaseTool
 from langgraph.prebuilt import tools_condition
 
@@ -34,16 +35,20 @@ class ToolContainer:
         pass
 
     @get_tools.register
-    def _get_tools_list(self, tools: list):
-        return [
-            self.tools[tool.name]
-            for tool in tools
-            if tool.name in self.tools and isinstance(tool, BaseTool)
-        ]
+    def _get_tools_list(self, tool_list: list):
+
+        tools = []
+        for tool in tool_list:
+            if isinstance(tool, BaseTool):
+                if tool.name in self.tools:
+                    tools.append(self.tools[tool.name])
+            elif isinstance(tool, str) and tool in self.tools:
+                tools.append(self.tools[tool])
+
+        return tools
 
     @get_tools.register
     def _get_tools_str(self, *tools: str | BaseTool):
-        print(2222)
         tools_list = []
         for tool in tools:
             if isinstance(tool, str) and tool in self.tools:
@@ -53,8 +58,6 @@ class ToolContainer:
             else:
                 raise ValueError(f"Invalid tool type {tool}")
         return tools_list
-
-
 
 
 tools_container = ToolContainer()

@@ -1,5 +1,6 @@
 from langgraph.graph import StateGraph
 
+from agents.base import BaseExecutorAgent
 from graphs.state import AgentState
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from nodes.router import route_node
@@ -10,24 +11,27 @@ from agents.knowledge_ingest_agent import knowledge_ingest_subgraph
 from langgraph.checkpoint.memory import InMemorySaver
 from tools.base import tools_container
 from pydantics.intentions import Intention
-
-
+from tools.forms import form_all_tools
 
 def _init_node(state: AgentState):
     return {
         "fill_form_messages": [],
+        "sub_messages": [],
         "answer": "",
         "intentions": {},
     }
 
 
 def _register_nodes(builder: StateGraph):
+    
+    executor_agent = BaseExecutorAgent().set_tools(tools_container.get_tools(form_all_tools))
+    
     builder.add_node("init_node", _init_node)
     builder.add_node("intention_node", intention_node)
     builder.add_node("route_node", route_node)
     builder.add_node("auth_permission", auth_permission_node)
-    builder.add_node("fill_form", fill_form_subgraph)
-    builder.add_node("knowledge_ingest", knowledge_ingest_subgraph)
+    # builder.add_node("fill_form", fill_form_subgraph)
+    builder.add_node("executor_agent", executor_agent.graph)
 
 
 def build_graph():

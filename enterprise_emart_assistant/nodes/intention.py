@@ -23,12 +23,11 @@ async def intention_node(state: AgentState):
     """
     messages = state.get("messages")
     message = messages[-1]
-
     intentions:Intention = await intention_llm().ainvoke(
         [SystemMessage(get_intention_system_prompt()), message]
     )
     intentions.origin_input = message.content
-    print(intentions)
+    print(f"意图: {intentions}")
     state.update(
         {
             "intentions": intentions
