@@ -12,7 +12,7 @@ from pydantics.intentions import Intention
 from tools.base import tools_container
 from tools.forms import leave_skills
 from langchain.tools import BaseTool
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.prebuilt import ToolNode
 from langchain_core.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
@@ -95,11 +95,12 @@ class BaseExecutorAgent:
 
     def _completed_node(self, state: AgentState):
         messages = state.get("sub_messages", [])
-        return {"answer": messages[-1].content}
+        message = messages[-1]
+        return {"answer": message.content}
 
     async def _polishe_node(self, state: AgentState):
         """
-        第一次交互需要润色下返回消息
+        第一次交互需要返回友好语言或直接调用工具
         """
 
         intentions: Intention = state.get("intentions", None)
@@ -111,13 +112,13 @@ class BaseExecutorAgent:
         ] + sub_messages
 
         res = await self.with_tools_llm().ainvoke(messages)
-
+        # print(f"res ======== {res.content}")
         return {"sub_messages": [res], "agent_attributes": {"is_polished": True}}
 
     def get_confirm_system_prompt(self) -> str:
 
         return f"""
-        你是善于用友好语言表达的引导流程专家。结合上下文和skill的规则来生成友好语言来引导用户。
+        你是善于用友好语言表达的引导流程专家。结合上下文和skill的规则来生成友好语言来引导用户或直接调用工具。
         ## 背景信息：
             - 今天日期：{datetime.now().strftime("%Y-%m-%d")}
             
@@ -147,6 +148,11 @@ class BaseExecutorAgent:
         """
         intentions: Intention = state.get("intentions", None)
         sub_messages = state.get("sub_messages", [])
+
+        if isinstance(sub_messages[-1], ToolMessage):
+            if sub_messages[-1].status == "error":
+                print(f"工具调用错误：{sub_messages[-1].content}")
+                return {"answer": "内部错误！"}
 
         if sub_messages[-1].name == "activate_skill":
             return Command(goto="polishe")
