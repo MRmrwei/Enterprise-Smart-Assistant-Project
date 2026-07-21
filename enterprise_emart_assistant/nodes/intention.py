@@ -19,7 +19,7 @@ def intention_llm():
 
 async def intention_node(state: AgentState):
     """
-    意图识别节点
+    意图识别根据意图选择skill节点
     """
     messages = state.get("messages")
     message = messages[-1]

@@ -41,7 +41,7 @@ def extract_info(intentions: Intention | None = None) -> str:
 
 
 async def form_init_node(state: AgentState):
-    """填单节点初始化"""
+    """意图识别根据意图选择skill节点"""
     # print(f"state = {state}")
 
     intentions: Intention = state.get("intentions", None)
@@ -71,6 +71,7 @@ async def form_create_node(state: AgentState):
 
 
 async def confirm_node(state: AgentState):
+    """确认节点"""
 
     messages = state.get("fill_form_messages", [])
 

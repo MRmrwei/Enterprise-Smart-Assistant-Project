@@ -17,6 +17,7 @@ def get_intention_system_prompt() -> str:
             
         ## file_path字段的注意事项：
             - 如果用户输入中没有文件路径和意图不是"{Intentions.KNOWLEDGE_INGEST.value}"请填""。
+            - 如果有路径必须要自动转成正斜杠
             
         ## 输出格式（严格JSON）：
             {{
