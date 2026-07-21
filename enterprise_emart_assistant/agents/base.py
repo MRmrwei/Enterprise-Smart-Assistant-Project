@@ -117,7 +117,7 @@ class BaseExecutorAgent:
     def get_confirm_system_prompt(self) -> str:
 
         return f"""
-        你是善于用友好语言表达的专家。结合上下文和skill的规则来生成友好语言来引导用户。
+        你是善于用友好语言表达的引导流程专家。结合上下文和skill的规则来生成友好语言来引导用户。
         ## 背景信息：
             - 今天日期：{datetime.now().strftime("%Y-%m-%d")}
             
@@ -147,7 +147,6 @@ class BaseExecutorAgent:
         """
         intentions: Intention = state.get("intentions", None)
         sub_messages = state.get("sub_messages", [])
-        is_polished = state.get("agent_attributes", {}).get("is_polished", False)
 
         if sub_messages[-1].name == "activate_skill":
             return Command(goto="polishe")
