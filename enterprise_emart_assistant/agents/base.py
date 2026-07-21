@@ -70,10 +70,10 @@ class BaseExecutorAgent:
         builder.add_edge("change_skill", "load_skills")
         builder.add_edge("load_skills", "ai_decision")
 
-        builder.add_edge("polishe", "confirm")
+        builder.add_edge("polishe", "ai_decision")
         builder.add_edge("confirm", "ai_decision")
         builder.add_edge("tools", "ai_decision")
-        builder.add_edge("load_tools", "tools")
+        # builder.add_edge("load_tools", "tools")
         builder.add_edge("completed", END)
         return builder
 
@@ -117,8 +117,7 @@ class BaseExecutorAgent:
     def get_confirm_system_prompt(self) -> str:
 
         return f"""
-
-        你是引导助手。结合上下文和skill的规则来引导用户。
+        你是善于用友好语言表达的专家。结合上下文和skill的规则来生成友好语言来引导用户。
         ## 背景信息：
             - 今天日期：{datetime.now().strftime("%Y-%m-%d")}
             
@@ -134,7 +133,7 @@ class BaseExecutorAgent:
     def _init_node(self, state: AgentState):
         return {
             "sub_messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES)],
-            "agent_attributes": {"is_polished": False},
+            "agent_attributes": {"is_interrupt": False},
         }
 
     def get_is_interrupt(self, intentions: Intention) -> bool:
@@ -150,24 +149,24 @@ class BaseExecutorAgent:
         sub_messages = state.get("sub_messages", [])
         is_polished = state.get("agent_attributes", {}).get("is_polished", False)
 
-        if len(sub_messages) < 1:
-            return Command(goto="confirm")
+        if sub_messages[-1].name == "activate_skill":
+            return Command(goto="polishe")
 
         if hasattr(sub_messages[-1], "tool_calls") and sub_messages[-1].tool_calls:
             return Command(goto="tools")
 
-        # 知识库问答不需要润色
-        if is_polished is False and self.get_is_interrupt(intentions):
-            return Command(goto="polishe")
+        if len(sub_messages) < 1:
+            return Command(goto="confirm")
 
-        content = "\n".join([m.content for m in sub_messages])
+        content = "\n".join(
+            [f"{i +1}. {m.content}\n" for i, m in enumerate(sub_messages)]
+        )
+
         messages = [
             SystemMessage(
-                content=f"{self.get_decisio_system_prompt()}\n 本次流程的基本情况：\n{self.extract_info(intentions)}"
+                content=f"{self.get_decisio_system_prompt()}\n 本次流程的基本情况：\n{self.extract_info(intentions)} "
             ),
-            HumanMessage(
-                content=f"请根据上下文和工具结果，给出一个AI决策结果。上下文和工具结果：{content}"
-            ),
+            HumanMessage(content=f"上下文与工具结果：{content}"),
         ]
 
         try:
@@ -177,7 +176,10 @@ class BaseExecutorAgent:
 
             print(f"智能流程决策结果：{result}")
 
-            return Command(goto=result.node)
+            return Command(
+                goto=result.node,
+                update={"agent_attributes": {"is_interrupt": result.is_interrupt}},
+            )
         except Exception as e:
             return Command(goto=END, update={"answer": str(e)})
 
@@ -187,14 +189,24 @@ class BaseExecutorAgent:
         """
 
         sub_messages = state.get("sub_messages", [])
+        is_interrupt = state.get("agent_attributes", {}).get("is_interrupt", False)
+        if is_interrupt:
+            # content = "\n".join(
+            #     [f"{i +1}. {m.content}\n" for i, m in enumerate(sub_messages)]
+            # )
+            confirm_msg = interrupt(sub_messages[-1].content)
+            messages = (
+                [SystemMessage(content=self.get_confirm_system_prompt())]
+                + sub_messages
+                + [HumanMessage(content=confirm_msg)]
+            )
 
-        confirm_msg = interrupt(sub_messages[-1].content)
-
-        messages = (
-            [SystemMessage(content=self.get_confirm_system_prompt())]
-            + sub_messages
-            + [HumanMessage(content=confirm_msg)]
-        )
+        else:
+            messages = [
+                SystemMessage(
+                    content="你是上下文判断专家，结合上下文判断是否调用工具，如果不需要请返回友好语句"
+                )
+            ] + sub_messages
 
         res = await self.with_tools_llm().ainvoke(messages)
 
@@ -250,21 +262,25 @@ class BaseExecutorAgent:
     def get_decisio_system_prompt(self) -> str:
         return """
         你是智能流程决策器。根据上下文和工具执行结果，判断当前任务是否已经彻底结束
-        ##决策规则（必须三选一）：
+        ## 决策规则：
             1. 决策为 "completed" 的情况：
             - 工具返回了"提交成功"、"创建成功"、"已取消"、"已放弃"等终结性结果或者完成的意图。
             - 用户明确表达了结束意图且系统已响应（如"好的，已提交"）。
             2. 决策为 "confirm" 的情况：
             - 工具返回了"校验失败"、"缺少字段"、"格式错误"等需要修改的信息。
             - 需要用户提出修改意见、补充数据，或系统正在等待用户输入。
-            - 任何不确定的情况，都优先选择 "confirm"（安全优先）。
-            3. 决策为 "load_tools" 的情况：
-            - 不需要用户干预和修改的流程
-            - 需要直接调用工具返回结果的流程
+        ## is_interrupt字段规则：
+            1. 值为 "true" 的情况：
+                - 需要人工干预的流程。
+                - 需要用确认，修改，补全数据的流程。
+            2. 值为 "false" 的情况：
+                - 不需要人工干预的流程。
+                - 询问知识库，获取个人信息的流程
         ## Json 输出格式：
             {
-                "node": completed|confirm|load_tools,
+                "node": completed|confirm,
                 "reason": 判断理由
+                "is_interrupt": true|false
             }
         ## 注意：
             - 必须json格式返回
