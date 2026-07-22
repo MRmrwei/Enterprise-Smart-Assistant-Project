@@ -12,9 +12,10 @@ async def main():
     while True:
         print("\n👋 欢迎使用深度 seek ！")
         q = input("问题: ")
-        q = r"帮我上传文档到知识库，文档路径为：C:\Users\宝🐖\Desktop\向量数据库11.doc"
+        # q = r"帮我上传文档到知识库，文档路径为：C:\Users\宝🐖\Desktop\向量数据库11.doc"
         # q = "我感冒了帮我请假"
         # q = "公司周六日休息吗"
+        # q = "我们公司经营什么业务"
 
         if q in ["exit", "quit", "e", "q"]:
             print("\n👋 用户中断，程序退出")
@@ -36,15 +37,12 @@ async def main():
             },
             config,
         )
-        
-        
+
         while "__interrupt__" in result:
             interrupt_data = result["__interrupt__"][0].value
             print(f"{interrupt_data}")
             q = input("请输入你的答案：")
             result = await main_graph.ainvoke(Command(resume=q), config)
-            
-            
 
         answer = result["answer"]
         print(f"🤖 助手回复: {answer}")

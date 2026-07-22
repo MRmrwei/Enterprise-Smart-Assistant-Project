@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).parent.parent.parent
+ROOT_DIR = Path(__file__).parent.parent
 
 class Config:
     def __init__(self):
