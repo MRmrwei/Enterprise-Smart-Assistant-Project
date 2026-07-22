@@ -14,9 +14,7 @@ from tools.base import tools_container
 from pydantics.intentions import Intention
 from tools.forms import form_all_tools
 from tools.qa import qa_query
-from tools.knowledges import skills, analysis_word, upload_knowledge
 from langchain_core.messages import HumanMessage, SystemMessage
-
 
 def _init_node(state: AgentState):
     return {
@@ -31,7 +29,7 @@ def _register_nodes(builder: StateGraph):
 
     executor_agent = BaseExecutorAgent().set_tools(
         tools_container.get_tools(
-            form_all_tools + [qa_query, analysis_word, upload_knowledge]
+            form_all_tools + [qa_query]
         )
     )
 

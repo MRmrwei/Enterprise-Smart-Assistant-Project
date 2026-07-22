@@ -1,7 +1,6 @@
 from datetime import datetime
 from email.policy import strict
 from langgraph.graph.state import END, CompiledStateGraph, StateGraph
-from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.language_models.chat_models import BaseChatModel
 from regex import T
 from enums.intentions import Intentions
@@ -17,7 +16,6 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.types import Command, interrupt
-from tools.knowledges import skills, analysis_word, upload_knowledge
 
 
 class BaseExecutorAgent:
@@ -47,7 +45,7 @@ class BaseExecutorAgent:
         return self.llm.bind_tools(self.get_tools(), strict=True)
 
     def get_skills(self) -> list[BaseTool]:
-        return tools_container.get_tools(leave_skills, skills)
+        return tools_container.get_tools(leave_skills)
 
     def _build_graph(self) -> StateGraph:
         builder = StateGraph(AgentState)
@@ -96,10 +94,15 @@ class BaseExecutorAgent:
 
         return Command(name="completed", update={"sub_messages": [res]})
 
-    def _completed_node(self, state: AgentState):
+    async def _completed_node(self, state: AgentState):
         messages = state.get("sub_messages", [])
-        message = messages[-1]
-        return {"answer": message.content}
+
+        res = await self.llm.ainvoke(
+            [SystemMessage(content="你是一个智能助手，请用友好的语言回答用户问题。请基于下上下文信息回答用户的问题。如果上下文不足以回答问题，请如实告知。")]
+            + messages
+        )
+
+        return {"answer": res.content}
 
     async def _load_skills_node(self, state: AgentState):
         """
@@ -274,8 +277,7 @@ class BaseExecutorAgent:
             - 工具返回了"提交成功"、"创建成功"、"已取消"、"已放弃"等终结性结果或者完成的意图。
             - 用户明确表达了结束意图且系统已响应（如"好的，已提交"）。
             2. 决策为 "confirm" 的情况：
-            - 工具返回了"校验失败"、"缺少字段"、"格式错误"等需要修改的信息。
-            - 需要用户提出修改意见、补充数据，或系统正在等待用户输入。
+            - 需要用户提出修改意见、补充数据，或确定是否继续执行。
             - 需要模型调用工具。
         ## is_interrupt字段规则：
             1. 值为 "true" 的情况：
@@ -284,6 +286,7 @@ class BaseExecutorAgent:
             2. 值为 "false" 的情况：
                 - 不需要人工干预的流程。
                 - 询问知识库，获取个人信息的流程
+                - 可以自动使用工具、不许要用户确认的行为。
         ## Json 输出格式：
             {
                 "node": completed|confirm,

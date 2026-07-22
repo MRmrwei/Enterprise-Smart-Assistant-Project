@@ -1,60 +1,56 @@
+import json
+
+from aspose import words_foss
+from click import prompt
+from langchain.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_skills_adapters import SkillsTool
 
+from llms.factory import get_default_llm
+from services.file import remote_document
 
-@tool
-def analysis_word(file_path: str):
+# @tool
+# def upload_str_knowledge(file_path: str):
+#     pass
+
+
+# @tool
+async def upload_file_knowledge(file_url: str) -> str:
+
+    try:
+        with remote_document(file_url, ["doc", "docx"]) as path:
+            word = words_foss.Document(path).get_text()
+            # print(f"文件已下载到: {word.get_text()}")
+    except Exception as e:
+        return f"下载失败：{e}"
+
+    prompt = """
+        【系统指令】
+        你是一个文档切割工具，不是作家、编辑或摘要员。唯一职责是裁剪文本。
+
+        【最高优先级约束 - 必须首先执行】
+        1. 零修改原则：输出的每段内容必须与下方【原文档】中的原文逐字逐句完全一致。不得修改任何标点、术语、数字、空格、引用标记（如[citation:X]）、加粗符号（**）。严禁改写、总结、润色、压缩或翻译。
+        2. 严禁添加：禁止添加任何"上下文锚点"、"核心主题"、"本文档关于XXX部分"等额外文字。只输出原文片段本身。
+
+        【分块约束】
+        3. 块大小：每块内容长度控制在300-500个字符（含标点符号、英文、数字、空格）。注意：是"字符"不是"汉字"。
+        4. 切割边界：必须在句号（。）问号（？）感叹号（！）或段落换行（\n\n）处切割。严禁在逗号、分号、冒号处切断句子。
+        5. 语义保护：如某个自然段落在300-500字之间，则保留该段落为独立一块，不拆分。
+        6. 完整性：如遇到列表（1. 2. 3. 或 - 项目），必须将整个列表视为一个整体，禁止将列表项拆散到不同块中。
+        ## 请返回json格式：
+            ["块1", "块2"]
     """
-    通过文件地址获取文件并解析内容返回，上传知识库文档中带有文档地址请调用此工具获取文档内容
-    Args:
-        file_path: 文件地址 必填
-    """
+    res = await get_default_llm(response_format={"type": "json_object"}).ainvoke(
+        [SystemMessage(content=prompt), HumanMessage(content=f"文档内容：\n{word}")]
+    )
+    
+    chunk = json.loads(res.content)
 
-    return """
-腾讯公司介绍
-
-腾讯成立于1998年，总部位于中国深圳，是一家世界领先的互联网科技公司。2004年于香港联合交易所主板上市，股票代码为00700[citation:4][citation:11]。公司以“用户为本，科技向善”为使命愿景，致力于用创新的产品和服务提升全球各地人们的生活品质[citation:4]。
-
-【发展历程与业务演变】
-腾讯的发展史是一部不断“变形”的商业进化史。公司从即时通讯软件起步，在探索盈利模式的过程中，通过模仿日本电信运营商推出增值服务，并在与中国移动合作“移动梦网”业务后，于2001年首次实现单月盈亏平衡，成为中国最早盈利的互联网公司之一[citation:2]。
-2004年上市前后，腾讯完成了第一次重大转型。通过推出QQ秀、QQ空间、QQ游戏等产品，互联网增值服务收入快速增长，成功摆脱了对“移动梦网”业务的依赖，构建起在社交领域的优势[citation:2]。此后，腾讯主动进军游戏业务，在经历初期挫折后，凭借《穿越火线》《地下城与勇士》等爆款产品及对Riot Games的投资，确立了游戏领域的统治地位。到2011年，网络游戏收入已占全年总收入的一半以上[citation:2]。
-2011年，微信的推出成为腾讯发展史上的又一关键转折点。这款产品不仅帮助腾讯在移动互联网时代锁定了胜局，更推动其从一家互联网产品公司，成长为横跨社交、游戏、内容、金融与产业互联网的超级平台型企业[citation:2][citation:7]。近年来，随着2018年确立“科技向善”使命及2021年将“可持续社会价值创新”纳入核心战略，腾讯已无法用单一业务来定义，其业务版图和价值主张持续扩展[citation:5][citation:8]。
-
-【核心业务板块】
-目前，腾讯的业务主要由四大板块构成[citation:1][citation:6]：
-1.  **增值服务**：主要包括网络游戏（如《王者荣耀》《和平精英》等长青游戏）和视频号直播、视频付费会员等社交网络服务。
-2.  **营销服务**：涵盖媒体广告、社交及其他广告业务，智能投放产品矩阵和视频号广告是重要增长引擎。
-3.  **金融科技及企业服务**：提供商业支付、金融科技及腾讯云等服务，助力企业实现数字化转型。
-4.  **其他业务**：包括为第三方制作与发行电影电视节目、内容授权及商品销售等。
-"""
-
-    # from aspose import words_foss
-    # word = words_foss.Document(file_path)
-
-    # splitter = RecursiveCharacterTextSplitter(
-    #     chunk_size=350,  # 每块 350 字（中文约 400 Token）
-    #     chunk_overlap=50,
-    #     separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""],
-    #     length_function=len,
-    # )
-    # texts = splitter.split_text(word.get_text())
-    # docs = [Document(text, metadata={"xxs":333}) for text in texts]
-    # print("文档内容：")
-    # [print(f"{doc}\n----------------------------------------------\n") for doc in docs]
-
-
-@tool
-def upload_knowledge(docs: str):
-    """
-    将接收到的字符串内容上传到向量数据库，如用户需要把内容上传到向量数据库中，请调用此工具
-    Args:
-        docs: 接收到的字符串内容
-    """
-
-    return "上传成功， id1559"
+    print(f"res = {res.content}")
 
 
 skills = SkillsTool(skills_path="./skills/knowledge/")
+# skills.verbose=True
 skills.name = "knowledge_skills"
