@@ -7,8 +7,6 @@ from llms.factory import get_default_llm
 from nodes.router import route_node
 from nodes.intention import intention_node
 from nodes.auth import auth_permission_node
-from agents.fill_form_agent import fill_form_subgraph
-from agents.knowledge_ingest_agent import knowledge_ingest_subgraph
 from langgraph.checkpoint.memory import InMemorySaver
 from tools.base import tools_container
 from pydantics.intentions import Intention
@@ -18,7 +16,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 def _init_node(state: AgentState):
     return {
-        "fill_form_messages": [],
         "sub_messages": [],
         "answer": "",
         "intentions": {},

@@ -13,8 +13,6 @@ class AgentState(MessagesState):
     user_id: str | None = None
     answer: str | None = ""
     intentions: Intention | None = None
-    fill_form_messages: Annotated[list[AnyMessage], add_messages]
-    knowledge_ingest_messages: Annotated[list[AnyMessage], add_messages]
     sub_messages: Annotated[list[AnyMessage], add_messages]
     agent_attributes: dict | None = {}
     pass
