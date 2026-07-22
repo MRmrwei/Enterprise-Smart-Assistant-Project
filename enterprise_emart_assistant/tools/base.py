@@ -4,6 +4,8 @@ from langchain.tools import BaseTool
 from langgraph.prebuilt import tools_condition
 
 from tools.forms import form_all_tools_skills
+from tools.qa import qa_query
+from tools.knowledges import skills, analysis_word, upload_knowledge
 
 
 class ToolContainer:
@@ -14,7 +16,9 @@ class ToolContainer:
         self._init_register()
 
     def _init_register(self):
-        self.register(form_all_tools_skills)
+        self.register(
+            form_all_tools_skills + [qa_query, skills, analysis_word, upload_knowledge]
+        )
 
     @singledispatchmethod
     def register(self, tool):

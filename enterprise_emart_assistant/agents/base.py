@@ -17,6 +17,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.types import Command, interrupt
+from tools.knowledges import skills, analysis_word, upload_knowledge
 
 
 class BaseExecutorAgent:
@@ -46,7 +47,7 @@ class BaseExecutorAgent:
         return self.llm.bind_tools(self.get_tools(), strict=True)
 
     def get_skills(self) -> list[BaseTool]:
-        return tools_container.get_tools(leave_skills)
+        return tools_container.get_tools(leave_skills, skills)
 
     def _build_graph(self) -> StateGraph:
         builder = StateGraph(AgentState)
@@ -54,25 +55,27 @@ class BaseExecutorAgent:
         builder.add_node("init_node", self._init_node)
         builder.add_node("change_skill", self._change_skill_node)
         builder.add_node(
-            "load_skills", ToolNode(self.get_skills(), messages_key="sub_messages")
+            "init_skills", ToolNode(self.get_skills(), messages_key="sub_messages")
         )
         builder.add_node(
             "tools", ToolNode(self.get_tools(), messages_key="sub_messages")
         )
+        builder.add_node("load_skills", self._load_skills_node)
         builder.add_node("ai_decision", self._ai_decision_node)
         builder.add_node("confirm", self._confirm_node)
-        builder.add_node("polishe", self._polishe_node)
         builder.add_node("completed", self._completed_node)
-        builder.add_node("load_tools", self._load_tools_node)
+        # builder.add_node("load_tools", self._load_tools_node)
 
         builder.set_entry_point("init_node")
-        builder.add_edge("init_node", "change_skill")
-        builder.add_edge("change_skill", "load_skills")
-        builder.add_edge("load_skills", "ai_decision")
 
-        builder.add_edge("polishe", "ai_decision")
+        builder.add_edge("init_node", "change_skill")
+        builder.add_edge("change_skill", "init_skills")
+        builder.add_edge("init_skills", "load_skills")
+
+        builder.add_edge("load_skills", "ai_decision")
         builder.add_edge("confirm", "ai_decision")
         builder.add_edge("tools", "ai_decision")
+
         # builder.add_edge("load_tools", "tools")
         builder.add_edge("completed", END)
         return builder
@@ -98,8 +101,9 @@ class BaseExecutorAgent:
         message = messages[-1]
         return {"answer": message.content}
 
-    async def _polishe_node(self, state: AgentState):
+    async def _load_skills_node(self, state: AgentState):
         """
+        初始化skill节点
         第一次交互需要返回友好语言或直接调用工具
         """
 
@@ -113,7 +117,7 @@ class BaseExecutorAgent:
 
         res = await self.with_tools_llm().ainvoke(messages)
         # print(f"res ======== {res.content}")
-        return {"sub_messages": [res], "agent_attributes": {"is_polished": True}}
+        return {"sub_messages": [res]}
 
     def get_confirm_system_prompt(self) -> str:
 
@@ -153,9 +157,6 @@ class BaseExecutorAgent:
             if sub_messages[-1].status == "error":
                 print(f"工具调用错误：{sub_messages[-1].content}")
                 return {"answer": "内部错误！"}
-
-        if sub_messages[-1].name == "activate_skill":
-            return Command(goto="polishe")
 
         if hasattr(sub_messages[-1], "tool_calls") and sub_messages[-1].tool_calls:
             return Command(goto="tools")
@@ -249,6 +250,7 @@ class BaseExecutorAgent:
         intentions: Intention = state.get("intentions", None)
 
         prompt = self.get_init_system_prompt() + self.extract_info(intentions)
+
         llm = self.llm.bind_tools(self.get_skills(), strict=True)
 
         # messages = state.get("sub_messages", [])[-1]
@@ -274,6 +276,7 @@ class BaseExecutorAgent:
             2. 决策为 "confirm" 的情况：
             - 工具返回了"校验失败"、"缺少字段"、"格式错误"等需要修改的信息。
             - 需要用户提出修改意见、补充数据，或系统正在等待用户输入。
+            - 需要模型调用工具。
         ## is_interrupt字段规则：
             1. 值为 "true" 的情况：
                 - 需要人工干预的流程。

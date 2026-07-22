@@ -12,5 +12,8 @@ def route_node(state: AgentState):
 
     if intentions is None:
         return Command(goto=END)
-    return Command(goto="executor_agent")
+    elif intentions.type == Intentions.UNKNOWN.value:
+        print("Unknown Intention")
+        return Command(goto="chat_node")
 
+    return Command(goto="executor_agent")
