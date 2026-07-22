@@ -13,7 +13,8 @@ async def main():
         print("\n👋 欢迎使用深度 seek ！")
         q = input("问题: ")
         q = r"帮我上传文档到知识库，文档路径为：C:\Users\宝🐖\Desktop\向量数据库11.doc"
-        q = "我感冒了帮我请假"
+        # q = "我感冒了帮我请假"
+        # q = "公司周六日休息吗"
 
         if q in ["exit", "quit", "e", "q"]:
             print("\n👋 用户中断，程序退出")
