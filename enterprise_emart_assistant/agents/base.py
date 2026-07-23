@@ -98,7 +98,11 @@ class BaseExecutorAgent:
         messages = state.get("sub_messages", [])
 
         res = await self.llm.ainvoke(
-            [SystemMessage(content="你是一个智能助手，请用友好的语言回答用户问题。请基于下上下文信息回答用户的问题。如果上下文不足以回答问题，请如实告知。")]
+            [
+                SystemMessage(
+                    content="你是一个智能助手，请用友好的语言回答用户问题。请基于下上下文信息回答用户的问题。如果上下文不足以回答问题，请如实告知。"
+                )
+            ]
             + messages
         )
 
@@ -185,6 +189,17 @@ class BaseExecutorAgent:
 
             print(f"智能流程决策结果：{result}")
 
+            if result.node == "parent":
+
+                latest_user_message = state.get("agent_attributes", {}).get(
+                    "latest_user_message", ""
+                )
+                return Command(
+                    graph=Command.PARENT,
+                    goto="init_node",
+                    update={"messages": [HumanMessage(content=latest_user_message)]},
+                )
+
             return Command(
                 goto=result.node,
                 update={"agent_attributes": {"is_interrupt": result.is_interrupt}},
@@ -199,10 +214,8 @@ class BaseExecutorAgent:
 
         sub_messages = state.get("sub_messages", [])
         is_interrupt = state.get("agent_attributes", {}).get("is_interrupt", False)
+        confirm_msg = ""
         if is_interrupt:
-            # content = "\n".join(
-            #     [f"{i +1}. {m.content}\n" for i, m in enumerate(sub_messages)]
-            # )
             confirm_msg = interrupt(sub_messages[-1].content)
             messages = (
                 [SystemMessage(content=self.get_confirm_system_prompt())]
@@ -219,7 +232,10 @@ class BaseExecutorAgent:
 
         res = await self.with_tools_llm().ainvoke(messages)
 
-        return {"sub_messages": [res]}
+        return {
+            "sub_messages": [res],
+            "agent_attributes": {"latest_user_message": confirm_msg},
+        }
 
     @property
     def graph(self) -> CompiledStateGraph:
@@ -271,31 +287,45 @@ class BaseExecutorAgent:
 
     def get_decisio_system_prompt(self) -> str:
         return """
-        你是智能流程决策器。根据上下文和工具执行结果，判断当前任务是否已经彻底结束
-        ## 决策规则：
-            1. 决策为 "completed" 的情况：
-            - 工具返回了"提交成功"、"创建成功"、"已取消"、"已放弃"等终结性结果或者完成的意图。
-            - 用户明确表达了结束意图且系统已响应（如"好的，已提交"）。
-            2. 决策为 "confirm" 的情况：
-            - 需要用户提出修改意见、补充数据，或确定是否继续执行。
-            - 需要模型调用工具。
-        ## is_interrupt字段规则：
-            1. 值为 "true" 的情况：
-                - 需要人工干预的流程。
-                - 需要用确认，修改，补全数据的流程。
-            2. 值为 "false" 的情况：
-                - 不需要人工干预的流程。
-                - 询问知识库，获取个人信息的流程
-                - 可以自动使用工具、不许要用户确认的行为。
-        ## Json 输出格式：
+            你是智能流程决策器。根据上下文和工具执行结果，判断当前任务是否已经彻底结束。
+
+            ## 当前任务状态判断规则（按优先级从高到低）：
+
+            1. **决策为 "completed"**（任务终结）：
+            - 工具返回了"提交成功"、"创建成功"、"已取消"、"已放弃"等明确终结性结果。
+            - 用户明确表达了结束意图（如"好的，就这样"），且系统已响应。
+
+            2. **决策为 "parent"**（任务切换/放弃当前子流程）：
+            - **用户的最新消息与当前正在执行的子任务（即当前 Skill/表单）完全无关**，例如：
+            - **用户明确表达放弃当前流程**（如“算了，不请了”、“取消”）。
+            - **用户要求跳转到其他功能**（如“我要查考勤”）。
+            - **注意**：如果用户只是对当前表单的某个字段进行修改或补充（如“改成明天”、“请3天”），则应走 confirm，而非 parent。
+
+            3. **决策为 "confirm"**（继续当前子流程，需要用户交互）：
+            - 需要用户补充当前表单的缺失字段。
+            - 需要用户对当前已填信息进行确认或修改。
+            - 需要模型调用工具以获取额外数据（但工具调用后仍留在当前任务）。
+            - 用户提问的内容与当前任务直接相关（如“请假流程怎么走？”、“需要什么材料？”）。
+
+            ## is_interrupt 字段规则：
+            - **true**：需要人工干预（如确认、修改、补全数据）。
+            - **false**：无需人工干预（如自动查询知识库、调用内部工具、返回信息）。
+            - node字段为parent时严禁输出true，用户转变意图时，请将is_interrupt字段设置为false。
+
+
+            ## 输出格式（必须 JSON）：
             {
-                "node": completed|confirm,
-                "reason": 判断理由
-                "is_interrupt": true|false
+                "node": "completed" | "confirm" | "parent",
+                "reason": "判断理由（简要说明）",
+                "is_interrupt": true | false,
             }
-        ## 注意：
-            - 必须json格式返回
-    """
+
+            ## 重要注意事项：
+            - 你必须严格区分“补充当前表单数据”和“提出全新的独立请求”。
+            - 若新请求不依赖当前未完成的表单数据，请选择 parent。
+            - 若你无法确定，请优先选择 confirm（因为安全），但如果你明确知道新意图与当前任务无关，则必须 parent。
+            - 只输出 JSON，不要额外解释。
+            """
 
     def get_load_tools_system_prompt(self) -> str:
         return f"""

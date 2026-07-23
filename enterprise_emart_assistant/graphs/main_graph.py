@@ -35,7 +35,6 @@ def _register_nodes(builder: StateGraph):
     builder.add_node("chat_node", _chat_node)
     builder.add_node("route_node", route_node)
     builder.add_node("auth_permission", auth_permission_node)
-    # builder.add_node("fill_form", fill_form_subgraph)
     builder.add_node("executor_agent", executor_agent.graph)
 
 
