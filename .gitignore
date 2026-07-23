@@ -3,3 +3,4 @@
 .venv
 uv.lock
 __pycache__
+.idea
