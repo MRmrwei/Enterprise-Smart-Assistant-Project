@@ -1,0 +1,12 @@
+Name: gateway-api
+Host: 0.0.0.0
+Port: 8888
+Upstreams:
+  - Grpc:
+      Target: localhost:8081          # 你的 RPC 服务地址
+    ProtoSets:
+      - pb/service.pb                   # 加载描述文件
+    Mappings:
+      - Method: post                  # HTTP 方法
+        Path: /login                  # 你希望对外暴露的路径
+        RpcPath: main.rpc/Login       # 对应 proto 里的 package.service/method
