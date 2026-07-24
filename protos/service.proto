@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package main;
+
+option go_package = "./pb";
+
+enum STATUS {
+  SUCCESS = 0;
+  FAIL = 1;
+}
+message Response {
+  string message = 1;
+  STATUS status = 2;
+}
+
+message LoginRequest {
+  string account = 1;
+  string password = 2;
+}
+
+
+message LoginResponse {
+  string token = 1;
+  Response response = 2;
+}
+
+service rpc {
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
