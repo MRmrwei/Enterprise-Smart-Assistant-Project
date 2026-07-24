@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ai;
+
+message ChatRequest {
+  string question = 1;
+}
+
+message ChatResponse {
+  string message = 1;
+  string event = 2;
+}
+
+
+service rpc {
+  rpc Chat(ChatRequest) returns (stream ChatResponse);
+}
