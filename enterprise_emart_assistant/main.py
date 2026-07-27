@@ -41,7 +41,7 @@ class RpcServicer(ai_pb2_grpc.aiServicer):
                     if "answer" in node_data and node_data.get("answer") != "":
                         yield ai_pb2.ChatResponse(
                             message=node_data.get("answer"), event="answer"
-        #                 )
+                        )
         # 发送结束标志
         yield ai_pb2.ChatResponse(message="", event="end")
 
