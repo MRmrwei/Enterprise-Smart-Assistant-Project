@@ -10,10 +10,10 @@ from prompts.intention import get_intention_system_prompt
 from pydantics.intentions import Intention
 
 
-
-
 def intention_llm():
-    llm = get_default_llm().with_structured_output(Intention, method="json_mode")
+    llm = get_default_llm().with_structured_output(
+        Intention, method="json_mode", include_raw=True
+    )
     return llm
 
 
@@ -23,14 +23,22 @@ async def intention_node(state: AgentState):
     """
     messages = state.get("messages")
     message = messages[-1]
-    intentions:Intention = await intention_llm().ainvoke(
+    response = await intention_llm().ainvoke(
         [SystemMessage(get_intention_system_prompt()), message]
     )
+
+    aimessage = response["raw"]
+    intentions: Intention = response["parsed"]
+
     intentions.origin_input = message.content
     print(f"意图: {intentions}")
-    state.update(
-        {
-            "intentions": intentions
-        }
-    )
+    # state.update(
+    #     {
+    #         "intentions": intentions
+    #     }
+    # )
+
+    state["messages"] = messages + [aimessage]
+    state["intentions"] = intentions
+
     return state

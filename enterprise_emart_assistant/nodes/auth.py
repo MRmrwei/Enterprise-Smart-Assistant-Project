@@ -10,7 +10,7 @@ def auth_permission_node(state: AgentState):
     intention_type = state.get("intention_type")
     role = state.get("role")
     user_id = state.get("user_id")
-    
+
     # if role not in [Role.BOSS.value, Role.MANAGER.value]:
         
     #     return Command(goto=END, update={"answer": "无权限访问"})        
@@ -18,4 +18,4 @@ def auth_permission_node(state: AgentState):
     # if intention_type is Intentions.FILL_FORM.value:
     #     pass
     
-    return state
+    return 

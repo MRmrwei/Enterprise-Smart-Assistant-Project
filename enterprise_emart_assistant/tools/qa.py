@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from db.vector import vector_store
+# from db.vector import vector_store
 from llms.factory import get_default_llm
 
 
@@ -10,6 +10,9 @@ async def qa_query(question: str) -> str:
     Args:
         question: 问题
     """
+
+
+    return "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"
     docs = await vector_store.asimilarity_search(question, k=3)
     
     context = [f"{doc.page_content}\n" for doc in docs]
