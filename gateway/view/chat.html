@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 对话 · 推理与答案</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f7f7f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat-container {
+            width: 100%;
+            max-width: 820px;
+            height: 90vh;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #messages {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+        .message {
+            max-width: 88%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 15px;
+            word-break: break-word;
+            animation: fadeIn 0.25s ease;
+        }
+        .user { align-self: flex-end; background: #e9e9eb; color: #1e1e1e; }
+        .ai {
+            align-self: flex-start;
+            background: #f0f0f4;
+            border-bottom-left-radius: 6px;
+            width: 100%;
+            max-width: 100%;
+            padding: 16px 20px;
+        }
+        .ai .reasoning-details {
+            margin-bottom: 12px;
+            border: 1px solid #e0e0e4;
+            border-radius: 8px;
+            padding: 0;
+        }
+        .ai .reasoning-details summary {
+            padding: 8px 14px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #444;
+            background: #f5f5f7;
+            border-radius: 8px;
+            user-select: none;
+        }
+        .ai .reasoning-details summary:hover { background: #ececf0; }
+        .ai .reasoning-details .reasoning-steps {
+            padding: 8px 14px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ai .reasoning-details .step {
+            font-size: 14px;
+            color: #444;
+            background: #fafafc;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #a0a0c0;
+            animation: fadeIn 0.2s ease;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .ai .answer {
+            font-size: 15px;
+            color: #1e1e1e;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 1.5em;
+        }
+        .ai .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.1em;
+            background: #666;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+            animation: blink 0.9s step-end infinite;
+        }
+        .ai.done .cursor { display: none; }
+        .error-msg {
+            color: #c62828;
+            background: #ffebee;
+            align-self: center;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+        #input-area {
+            display: flex;
+            gap: 10px;
+            padding: 16px 20px 20px;
+            border-top: 1px solid #e6e6e8;
+            background: #fcfcfd;
+        }
+        #question-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d0d0d4;
+            border-radius: 30px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #question-input:focus { border-color: #7b7bf5; }
+        #send-btn, #stop-btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        #send-btn {
+            background: #7b7bf5;
+            color: white;
+        }
+        #send-btn:hover:not(:disabled) { background: #6565d9; }
+        #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #stop-btn {
+            background: #f5f5f5;
+            color: #333;
+            display: none;
+        }
+        #stop-btn:hover { background: #e0e0e0; }
+        #stop-btn.show { display: inline-block; }
+    </style>
+</head>
+<body>
+<div id="chat-container">
+    <div id="messages">
+        <div class="message ai" style="opacity:0.7; background:transparent; color:#999; font-size:14px; align-self:center;">
+            💡 输入问题开始对话
+        </div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="question-input" placeholder="输入你的问题…" autofocus />
+        <button id="send-btn">发送</button>
+        <button id="stop-btn">停止</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---- DOM 元素 ----
+        const messagesEl = document.getElementById('messages');
+        const inputEl = document.getElementById('question-input');
+        const sendBtn = document.getElementById('send-btn');
+        const stopBtn = document.getElementById('stop-btn');
+
+        // ---- 全局状态 ----
+        let abortController = null;
+        let currentAiMessage = null;
+        let reasoningStepsContainer = null;
+        let answerContainer = null;
+        let isStreaming = false;
+        let typeTimers = [];
+
+        // ---- 推理队列 ----
+        let reasoningQueue = [];
+        let isProcessing = false;
+        let processingTimer = null;
+
+        // ---- 答案缓存 ----
+        let answerBuffer = [];
+        let answerShown = false;
+
+        // ===== 工具函数 =====
+        function addUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'message user';
+            div.textContent = text;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return div;
+        }
+
+        function createAiPlaceholder() {
+            if (currentAiMessage && !currentAiMessage.classList.contains('done')) {
+                finishAiMessage();
+            }
+            answerShown = false;
+            const container = document.createElement('div');
+            container.className = 'message ai';
+
+            const details = document.createElement('details');
+            details.className = 'reasoning-details';
+            const summary = document.createElement('summary');
+            summary.textContent = '💭 思考过程';
+            details.appendChild(summary);
+            const stepsContainer = document.createElement('div');
+            stepsContainer.className = 'reasoning-steps';
+            details.appendChild(stepsContainer);
+            details.open = true;
+            container.appendChild(details);
+
+            const answerDiv = document.createElement('div');
+            answerDiv.className = 'answer';
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            answerDiv.appendChild(cursor);
+            container.appendChild(answerDiv);
+
+            messagesEl.appendChild(container);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            currentAiMessage = container;
+            reasoningStepsContainer = stepsContainer;
+            answerContainer = answerDiv;
+            return container;
+        }
+
+        // ---- 逐字显示答案 ----
+        function displayAnswer(content, isEnd) {
+            if (!answerContainer) createAiPlaceholder();
+            const cursor = answerContainer.querySelector('.cursor');
+            if (!cursor) {
+                const node = document.createTextNode(content);
+                answerContainer.appendChild(node);
+                if (isEnd) finishAiMessage();
+                return;
+            }
+            let index = 0;
+            function typeNextChar() {
+                if (index < content.length) {
+                    const charNode = document.createTextNode(content[index]);
+                    answerContainer.insertBefore(charNode, cursor);
+                    index++;
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    const timer = setTimeout(typeNextChar, 20);
+                    typeTimers.push(timer);
+                } else {
+                    if (isEnd) finishAiMessage();
+                }
+            }
+            typeNextChar();
+        }
+
+        // ---- 处理推理队列（串行逐个显示） ----
+        function processQueue() {
+            if (isProcessing) return;
+            if (reasoningQueue.length === 0) {
+                // 队列为空，显示缓存答案
+                showCachedAnswers();
+                return;
+            }
+            isProcessing = true;
+            const item = reasoningQueue.shift();
+            const step = document.createElement('div');
+            step.className = 'step';
+            step.textContent = item.content;
+            reasoningStepsContainer.appendChild(step);
+            const details = currentAiMessage?.querySelector('.reasoning-details');
+            if (details) details.open = true;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            // 延迟后处理下一个
+            processingTimer = setTimeout(() => {
+                isProcessing = false;
+                processQueue();
+            }, 300); // 300ms 间隔，肉眼可见逐个出现
+        }
+
+        // ---- 显示缓存的答案 ----
+        function showCachedAnswers() {
+            if (answerShown) return;
+            if (answerBuffer.length === 0) return;
+            let fullAnswer = '';
+            for (let item of answerBuffer) {
+                fullAnswer += item.content;
+            }
+            answerBuffer = [];
+            answerShown = true;
+            displayAnswer(fullAnswer, true);
+        }
+
+        // ---- 添加推理事件 ----
+        function appendReasoning(content) {
+            if (!reasoningStepsContainer) createAiPlaceholder();
+            reasoningQueue.push({ content });
+            if (!isProcessing) {
+                processQueue();
+            }
+        }
+
+        // ---- 添加答案片段 ----
+        function appendAnswer(content) {
+            if (!answerContainer) createAiPlaceholder();
+            answerBuffer.push({ content });
+        }
+
+        // ---- 完成当前 AI 消息 ----
+        function finishAiMessage() {
+            if (currentAiMessage) {
+                if (answerContainer) {
+                    const cursor = answerContainer.querySelector('.cursor');
+                    if (cursor) cursor.remove();
+                }
+                currentAiMessage.classList.add('done');
+                if (reasoningStepsContainer && reasoningStepsContainer.children.length === 0) {
+                    const details = currentAiMessage.querySelector('.reasoning-details');
+                    if (details) details.style.display = 'none';
+                }
+                currentAiMessage = null;
+                reasoningStepsContainer = null;
+                answerContainer = null;
+            }
+            // 清理队列和缓存
+            reasoningQueue = [];
+            isProcessing = false;
+            if (processingTimer) { clearTimeout(processingTimer); processingTimer = null; }
+            answerBuffer = [];
+            answerShown = false;
+        }
+
+        // ---- 重置所有状态 ----
+        function resetAll() {
+            stopAllTypers();
+            reasoningQueue = [];
+            isProcessing = false;
+            if (processingTimer) { clearTimeout(processingTimer); processingTimer = null; }
+            answerBuffer = [];
+            answerShown = false;
+            if (currentAiMessage) finishAiMessage();
+        }
+
+        // ---- 停止打字机 ----
+        function stopAllTypers() {
+            typeTimers.forEach(timer => clearTimeout(timer));
+            typeTimers = [];
+        }
+
+        // ---- 错误显示 ----
+        function showError(text) {
+            const div = document.createElement('div');
+            div.className = 'message error-msg';
+            div.textContent = '⚠️ ' + text;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function clearInput() {
+            inputEl.value = '';
+            inputEl.focus();
+        }
+
+        function setStreamingState(streaming) {
+            isStreaming = streaming;
+            sendBtn.disabled = streaming;
+            if (streaming) {
+                stopBtn.classList.add('show');
+            } else {
+                stopBtn.classList.remove('show');
+                abortController = null;
+            }
+        }
+
+        // ---- 取消请求 ----
+        function cancelStream() {
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+            resetAll();
+            setStreamingState(false);
+            const hint = document.createElement('div');
+            hint.className = 'message ai';
+            hint.style.cssText = 'color:#999; font-size:13px; background:transparent; align-self:center;';
+            hint.textContent = '⏹ 已停止生成';
+            messagesEl.appendChild(hint);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            clearInput();
+            sendBtn.disabled = false;
+        }
+
+        // ---- 处理 SSE 事件 ----
+        function handleSseEvent(event, rawData) {
+            let content = rawData;
+            let isEnd = false;
+            try {
+                const parsed = JSON.parse(rawData);
+                content = parsed.content || '';
+                isEnd = parsed.is_end || false;
+            } catch (e) {
+                content = rawData;
+                isEnd = false;
+            }
+
+            switch (event) {
+                case 'reasoning':
+                    appendReasoning(content);
+                    break;
+                case 'answer':
+                case 'chunk':
+                    appendAnswer(content);
+                    break;
+                case 'end':
+                    // 强制显示答案
+                    showCachedAnswers();
+                    // 清空可能残留的推理队列
+                    if (reasoningQueue.length > 0) {
+                        reasoningQueue = [];
+                        isProcessing = false;
+                        if (processingTimer) { clearTimeout(processingTimer); processingTimer = null; }
+                    }
+                    break;
+                case 'error':
+                    showError('服务端错误: ' + content);
+                    resetAll();
+                    if (abortController) abortController.abort();
+                    break;
+                default:
+                    if (content) appendAnswer(content);
+                    if (isEnd) showCachedAnswers();
+                    break;
+            }
+        }
+
+        // ---- 发送消息 ----
+        async function sendMessage() {
+            const question = inputEl.value.trim();
+            if (!question) return;
+            if (isStreaming) return;
+
+            resetAll();
+            addUserMessage(question);
+            clearInput();
+            createAiPlaceholder();
+
+            setStreamingState(true);
+            abortController = new AbortController();
+
+            try {
+                const response = await fetch('http://127.0.0.1:8888/agent/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/event-stream',
+                        'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+                        'Connection': 'keep-alive',
+                    },
+                    body: JSON.stringify({ question }),
+                    signal: abortController.signal,
+                });
+
+                if (!response.ok) {
+                    let errMsg = `服务器错误 (${response.status})`;
+                    try {
+                        const errorBody = await response.text();
+                        if (errorBody) errMsg = errorBody;
+                    } catch (_) {}
+                    throw new Error(errMsg);
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('text/event-stream')) {
+                    const text = await response.text();
+                    try {
+                        const json = JSON.parse(text);
+                        if (json.reasoning) appendReasoning(json.reasoning);
+                        if (json.answer) appendAnswer(json.answer);
+                        else if (json.message) appendAnswer(json.message);
+                    } catch (_) {
+                        appendAnswer(text);
+                    }
+                    showCachedAnswers();
+                    setStreamingState(false);
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                let currentEvent = 'message';
+                let currentData = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith(':')) continue;
+                        if (line.startsWith('event:')) {
+                            currentEvent = line.slice(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            const dataValue = line.slice(5);
+                            const trimmed = dataValue.startsWith(' ') ? dataValue.slice(1) : dataValue;
+                            if (currentData) currentData += '\n' + trimmed;
+                            else currentData = trimmed;
+                        } else if (line === '') {
+                            if (currentData !== '') {
+                                handleSseEvent(currentEvent, currentData);
+                                currentData = '';
+                                currentEvent = 'message';
+                            }
+                        }
+                    }
+                }
+
+                // 流结束，强制显示缓存答案
+                showCachedAnswers();
+                if (currentAiMessage) finishAiMessage();
+
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                resetAll();
+                showError(err.message || '请求失败，请重试');
+            } finally {
+                if (!abortController || !abortController.signal.aborted) {
+                    setStreamingState(false);
+                    if (currentAiMessage) finishAiMessage();
+                }
+                abortController = null;
+                sendBtn.disabled = false;
+            }
+        }
+
+        // ---- 事件绑定 ----
+        sendBtn.addEventListener('click', sendMessage);
+        stopBtn.addEventListener('click', cancelStream);
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        inputEl.focus();
+        window.__chat = { sendMessage, cancelStream };
+    })();
+</script>
+</body>
+</html>

@@ -11,6 +11,7 @@ message ChatRequest {
 message ChatResponse {
   string message = 1;
   string event = 2;
+  bool is_end = 3;
 }
 
 

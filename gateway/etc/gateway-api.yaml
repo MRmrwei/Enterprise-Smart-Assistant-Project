@@ -27,3 +27,7 @@ Log:
   MaxSize: 1                  # 单个文件最大 100MB，超过自动切割
   MaxBackups: 10                # 保留最近 10 个备份文件
   MaxAge: 30                    # 保留 30 天内的日志（按修改时间）
+
+AgentRpcConfig:
+  Endpoints:
+    - 127.0.0.1:50051

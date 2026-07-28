@@ -69,6 +69,7 @@ type ChatResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Event         string                 `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
+	IsEnd         bool                   `protobuf:"varint,3,opt,name=is_end,json=isEnd,proto3" json:"is_end,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -117,17 +118,25 @@ func (x *ChatResponse) GetEvent() string {
 	return ""
 }
 
+func (x *ChatResponse) GetIsEnd() bool {
+	if x != nil {
+		return x.IsEnd
+	}
+	return false
+}
+
 var File_ai_proto protoreflect.FileDescriptor
 
 const file_ai_proto_rawDesc = "" +
 	"\n" +
 	"\bai.proto\x12\x02ai\")\n" +
 	"\vChatRequest\x12\x1a\n" +
-	"\bquestion\x18\x01 \x01(\tR\bquestion\">\n" +
+	"\bquestion\x18\x01 \x01(\tR\bquestion\"U\n" +
 	"\fChatResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x14\n" +
-	"\x05event\x18\x02 \x01(\tR\x05event24\n" +
-	"\x05airpc\x12+\n" +
+	"\x05event\x18\x02 \x01(\tR\x05event\x12\x15\n" +
+	"\x06is_end\x18\x03 \x01(\bR\x05isEnd21\n" +
+	"\x02ai\x12+\n" +
 	"\x04Chat\x12\x0f.ai.ChatRequest\x1a\x10.ai.ChatResponse0\x01B\x06Z\x04./pbb\x06proto3"
 
 var (
@@ -148,8 +157,8 @@ var file_ai_proto_goTypes = []any{
 	(*ChatResponse)(nil), // 1: ai.ChatResponse
 }
 var file_ai_proto_depIdxs = []int32{
-	0, // 0: ai.airpc.Chat:input_type -> ai.ChatRequest
-	1, // 1: ai.airpc.Chat:output_type -> ai.ChatResponse
+	0, // 0: ai.ai.Chat:input_type -> ai.ChatRequest
+	1, // 1: ai.ai.Chat:output_type -> ai.ChatResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

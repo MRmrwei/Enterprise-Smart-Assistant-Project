@@ -19,27 +19,27 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Airpc_Chat_FullMethodName = "/ai.airpc/Chat"
+	Ai_Chat_FullMethodName = "/ai.ai/Chat"
 )
 
-// AirpcClient is the client API for Airpc service.
+// AiClient is the client API for Ai service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type AirpcClient interface {
+type AiClient interface {
 	Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatResponse], error)
 }
 
-type airpcClient struct {
+type aiClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewAirpcClient(cc grpc.ClientConnInterface) AirpcClient {
-	return &airpcClient{cc}
+func NewAiClient(cc grpc.ClientConnInterface) AiClient {
+	return &aiClient{cc}
 }
 
-func (c *airpcClient) Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatResponse], error) {
+func (c *aiClient) Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Airpc_ServiceDesc.Streams[0], Airpc_Chat_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Ai_ServiceDesc.Streams[0], Ai_Chat_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -54,69 +54,69 @@ func (c *airpcClient) Chat(ctx context.Context, in *ChatRequest, opts ...grpc.Ca
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Airpc_ChatClient = grpc.ServerStreamingClient[ChatResponse]
+type Ai_ChatClient = grpc.ServerStreamingClient[ChatResponse]
 
-// AirpcServer is the server API for Airpc service.
-// All implementations must embed UnimplementedAirpcServer
+// AiServer is the server API for Ai service.
+// All implementations must embed UnimplementedAiServer
 // for forward compatibility.
-type AirpcServer interface {
+type AiServer interface {
 	Chat(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error
-	mustEmbedUnimplementedAirpcServer()
+	mustEmbedUnimplementedAiServer()
 }
 
-// UnimplementedAirpcServer must be embedded to have
+// UnimplementedAiServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedAirpcServer struct{}
+type UnimplementedAiServer struct{}
 
-func (UnimplementedAirpcServer) Chat(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error {
+func (UnimplementedAiServer) Chat(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error {
 	return status.Error(codes.Unimplemented, "method Chat not implemented")
 }
-func (UnimplementedAirpcServer) mustEmbedUnimplementedAirpcServer() {}
-func (UnimplementedAirpcServer) testEmbeddedByValue()               {}
+func (UnimplementedAiServer) mustEmbedUnimplementedAiServer() {}
+func (UnimplementedAiServer) testEmbeddedByValue()            {}
 
-// UnsafeAirpcServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to AirpcServer will
+// UnsafeAiServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AiServer will
 // result in compilation errors.
-type UnsafeAirpcServer interface {
-	mustEmbedUnimplementedAirpcServer()
+type UnsafeAiServer interface {
+	mustEmbedUnimplementedAiServer()
 }
 
-func RegisterAirpcServer(s grpc.ServiceRegistrar, srv AirpcServer) {
-	// If the following call panics, it indicates UnimplementedAirpcServer was
+func RegisterAiServer(s grpc.ServiceRegistrar, srv AiServer) {
+	// If the following call panics, it indicates UnimplementedAiServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Airpc_ServiceDesc, srv)
+	s.RegisterService(&Ai_ServiceDesc, srv)
 }
 
-func _Airpc_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Ai_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ChatRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(AirpcServer).Chat(m, &grpc.GenericServerStream[ChatRequest, ChatResponse]{ServerStream: stream})
+	return srv.(AiServer).Chat(m, &grpc.GenericServerStream[ChatRequest, ChatResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Airpc_ChatServer = grpc.ServerStreamingServer[ChatResponse]
+type Ai_ChatServer = grpc.ServerStreamingServer[ChatResponse]
 
-// Airpc_ServiceDesc is the grpc.ServiceDesc for Airpc service.
+// Ai_ServiceDesc is the grpc.ServiceDesc for Ai service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Airpc_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ai.airpc",
-	HandlerType: (*AirpcServer)(nil),
+var Ai_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ai.ai",
+	HandlerType: (*AiServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Chat",
-			Handler:       _Airpc_Chat_Handler,
+			Handler:       _Ai_Chat_Handler,
 			ServerStreams: true,
 		},
 	},

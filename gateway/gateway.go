@@ -7,10 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"gateway/internal/config"
+	"gateway/internal/routes"
+	"gateway/internal/svc"
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/service"
 	"github.com/zeromicro/go-zero/gateway"
-	"github.com/zeromicro/go-zero/rest"
-	"net/http"
 )
 
 var configFile = flag.String("f", "etc/gateway-api.yaml", "the config file")
@@ -20,17 +21,12 @@ func main() {
 	var c config.Config // 或使用你自定义的 config.Config
 	conf.MustLoad(*configFile, &c)
 	gw := gateway.MustNewServer(c.GatewayConf)
-	gw.AddRoutes([]rest.Route{
-		rest.Route{
-			Path:   "d",
-			Method: "s",
-			Handler: func(writer http.ResponseWriter, request *http.Request) {
-
-			},
-		},
-	}, rest.WithSSE())
-	defer gw.Stop()
+	app := svc.NewServiceContext(c)
+	routes.Register(gw, app)
+	master := service.NewServiceGroup()
+	master.Add(gw)
+	defer master.Stop()
 
 	fmt.Printf("Starting gateway at %s:%d...\n", c.Host, c.Port)
-	gw.Start()
+	master.Start()
 }
