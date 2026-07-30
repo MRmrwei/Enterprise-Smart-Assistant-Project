@@ -30,6 +30,5 @@ class AgentRpc(ai_pb2_grpc.aiServicer):
             async for result in self.agentService.Chat(request.question, state, config):
                 yield ai_pb2.ChatResponse(data=result)
         except Exception as e:
-
             print(f"Error: {e}")
             yield ai_pb2.ChatResponse(data=SSEContent({"error": "未知错误"}, "error"))

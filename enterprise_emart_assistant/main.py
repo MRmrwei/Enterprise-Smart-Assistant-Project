@@ -13,8 +13,17 @@ async def serve():
     server.add_insecure_port("[::]:50051")
     await server.start()
     print("🚀 服务已启动，监听 50051 ...")
-    await server.wait_for_termination()
-   
+
+    try:
+        # 等待服务器被停止（可能由外部信号触发）
+        await server.wait_for_termination()
+    except asyncio.CancelledError:
+        # 捕获取消信号（Ctrl+C 或 asyncio.run() 的取消）
+        print("\n收到取消信号，正在关闭服务器...")
+    finally:
+        # 无论何种原因退出，都执行优雅关闭（grace 秒数根据业务调整）
+        await server.stop(grace=5)
+        print("✅ 服务器已安全关闭")
 
 
 def main():
