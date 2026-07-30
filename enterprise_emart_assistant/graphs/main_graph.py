@@ -1,5 +1,5 @@
 from langgraph.graph import END, StateGraph
-
+from langgraph.config import get_stream_writer
 from agents.base import BaseExecutorAgent
 from graphs.state import AgentState
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -14,6 +14,7 @@ from tools.forms import form_all_tools
 from tools.qa import qa_query
 from langchain_core.messages import HumanMessage, SystemMessage
 
+
 def _init_node(state: AgentState):
     return {
         "sub_messages": [],
@@ -25,9 +26,7 @@ def _init_node(state: AgentState):
 def _register_nodes(builder: StateGraph):
 
     executor_agent = BaseExecutorAgent().set_tools(
-        tools_container.get_tools(
-            form_all_tools + [qa_query]
-        )
+        tools_container.get_tools(form_all_tools + [qa_query])
     )
 
     builder.add_node("init_node", _init_node)
@@ -36,6 +35,8 @@ def _register_nodes(builder: StateGraph):
     builder.add_node("route_node", route_node)
     builder.add_node("auth_permission", auth_permission_node)
     builder.add_node("executor_agent", executor_agent.graph)
+    builder.add_node("completed", _completed_node)
+    builder.add_node("verification", _verification_node)
 
 
 async def _chat_node(state: AgentState):
@@ -44,6 +45,24 @@ async def _chat_node(state: AgentState):
         [SystemMessage("你是一个闲聊助手，负责和用户闲聊")] + messages
     )
     return {"messages": [res], "answer": res.content}
+
+
+async def _verification_node(state: AgentState):
+    """
+    审核节点
+    """
+
+    return state
+
+
+async def _completed_node(state: AgentState):
+
+    writer = get_stream_writer()
+
+    writer({"type": "answer", "content": state.get("answer", "")})
+
+    """完成节点，最终输出答案"""
+    return state
 
 
 def build_graph():
@@ -55,7 +74,12 @@ def build_graph():
     builder.add_edge("intention_node", "auth_permission")
 
     builder.add_edge("auth_permission", "route_node")
-    builder.add_edge("chat_node", END)
+
+    for node in ["chat_node", "executor_agent"]:
+        builder.add_edge(node, "verification")
+
+    builder.add_edge("verification", "completed")
+    builder.add_edge("completed", END)
 
     # ✅ 创建带允许列表的序列化器
     serde = JsonPlusSerializer(allowed_msgpack_modules=[Intention])

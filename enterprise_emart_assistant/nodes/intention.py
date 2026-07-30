@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
-
+from langgraph.config import get_stream_writer
 from enums.intentions import Intentions
 from graphs.state import AgentState
 from llms.factory import get_default_llm
@@ -14,6 +14,11 @@ def intention_llm():
     llm = get_default_llm().with_structured_output(
         Intention, method="json_mode", include_raw=True
     )
+
+    writer = get_stream_writer()
+
+    writer({"type": "reasoning", "content": "你好，世界！这是一段通过流式传输呈现的文字，模拟打字机的效果。"})
+
     return llm
 
 
