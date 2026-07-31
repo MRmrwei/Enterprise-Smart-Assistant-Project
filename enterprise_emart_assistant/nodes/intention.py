@@ -15,9 +15,7 @@ def intention_llm():
         Intention, method="json_mode", include_raw=True
     )
 
-    writer = get_stream_writer()
-
-    writer({"type": "reasoning", "content": "你好，世界！这是一段通过流式传输呈现的文字，模拟打字机的效果。"})
+    
 
     return llm
 
@@ -46,4 +44,9 @@ async def intention_node(state: AgentState):
     state["messages"] = messages + [aimessage]
     state["intentions"] = intentions
 
+
+
+    writer = get_stream_writer()
+
+    writer({"type": "reasoning", "content": "你好，世界！这是一段通过流式传输呈现的文字，模拟打字机的效果。"})
     return state

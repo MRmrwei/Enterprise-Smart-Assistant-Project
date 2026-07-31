@@ -1,566 +1,425 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI 对话 · 推理与答案</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            background: #f7f7f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        #chat-container {
-            width: 100%;
-            max-width: 820px;
-            height: 90vh;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        #messages {
-            flex: 1;
-            padding: 20px 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            scroll-behavior: smooth;
-        }
-        .message {
-            max-width: 88%;
-            padding: 12px 18px;
-            border-radius: 18px;
-            line-height: 1.6;
-            font-size: 15px;
-            word-break: break-word;
-            animation: fadeIn 0.25s ease;
-        }
-        .user { align-self: flex-end; background: #e9e9eb; color: #1e1e1e; }
-        .ai {
-            align-self: flex-start;
-            background: #f0f0f4;
-            border-bottom-left-radius: 6px;
-            width: 100%;
-            max-width: 100%;
-            padding: 16px 20px;
-        }
-        .ai .reasoning-details {
-            margin-bottom: 12px;
-            border: 1px solid #e0e0e4;
-            border-radius: 8px;
-            padding: 0;
-        }
-        .ai .reasoning-details summary {
-            padding: 8px 14px;
-            font-weight: 500;
-            cursor: pointer;
-            color: #444;
-            background: #f5f5f7;
-            border-radius: 8px;
-            user-select: none;
-        }
-        .ai .reasoning-details summary:hover { background: #ececf0; }
-        .ai .reasoning-details .reasoning-steps {
-            padding: 8px 14px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .ai .reasoning-details .step {
-            font-size: 14px;
-            color: #444;
-            background: #fafafc;
-            padding: 6px 12px;
-            border-radius: 4px;
-            border-left: 3px solid #a0a0c0;
-            animation: fadeIn 0.2s ease;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .ai .answer {
-            font-size: 15px;
-            color: #1e1e1e;
-            white-space: pre-wrap;
-            word-break: break-word;
-            min-height: 1.5em;
-        }
-        .ai .cursor {
-            display: inline-block;
-            width: 2px;
-            height: 1.1em;
-            background: #666;
-            margin-left: 2px;
-            vertical-align: text-bottom;
-            animation: blink 0.9s step-end infinite;
-        }
-        .ai.done .cursor { display: none; }
-        .error-msg {
-            color: #c62828;
-            background: #ffebee;
-            align-self: center;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
-        #input-area {
-            display: flex;
-            gap: 10px;
-            padding: 16px 20px 20px;
-            border-top: 1px solid #e6e6e8;
-            background: #fcfcfd;
-        }
-        #question-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #d0d0d4;
-            border-radius: 30px;
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        #question-input:focus { border-color: #7b7bf5; }
-        #send-btn, #stop-btn {
-            padding: 10px 22px;
-            border: none;
-            border-radius: 30px;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-            white-space: nowrap;
-        }
-        #send-btn {
-            background: #7b7bf5;
-            color: white;
-        }
-        #send-btn:hover:not(:disabled) { background: #6565d9; }
-        #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        #stop-btn {
-            background: #f5f5f5;
-            color: #333;
-            display: none;
-        }
-        #stop-btn:hover { background: #e0e0e0; }
-        #stop-btn.show { display: inline-block; }
-    </style>
+    <title>AI 对话助手 · SSE 流式</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/theme-chalk/index.css" />
+    <link rel="stylesheet" href="./main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/index.js"></script>
 </head>
 <body>
-<div id="chat-container">
-    <div id="messages">
-        <div class="message ai" style="opacity:0.7; background:transparent; color:#999; font-size:14px; align-self:center;">
-            💡 输入问题开始对话
+
+<div id="app">
+    <header class="app-header">
+        <div class="logo">
+            <span class="icon">✦</span>
+            <h1>AI 对话助手</h1>
         </div>
-    </div>
-    <div id="input-area">
-        <input type="text" id="question-input" placeholder="输入你的问题…" autofocus />
-        <button id="send-btn">发送</button>
-        <button id="stop-btn">停止</button>
-    </div>
+        <div class="status">
+            <span class="dot"></span>
+            <span>在线 · SSE 流式</span>
+        </div>
+    </header>
+
+    <main class="app-main" ref="mainContainer">
+        <div class="messages">
+            <div v-if="messages.length === 0" class="empty-state">
+                <div class="empty-icon">💬</div>
+                <div class="empty-text">开始你的第一次对话</div>
+                <div class="empty-sub">输入问题，AI 将流式展示推理过程</div>
+            </div>
+
+            <div v-for="(msg, idx) in messages" :key="idx" class="message" :class="msg.type">
+                <div class="avatar">
+                    {{ msg.type === 'ai' ? 'AI' : '我' }}
+                </div>
+                <div class="bubble">
+                    <template v-if="msg.type === 'user'">
+                        <div class="text">{{ msg.content }}</div>
+                    </template>
+                    <template v-if="msg.type === 'ai'">
+
+                        <div v-if="msg.thinking" class="thinking-placeholder">
+                            <span>正在思考</span>
+                            <span class="dots">
+                                    <span></span><span></span><span></span>
+                            </span>
+                        </div>
+                        <div class="ai-reply">
+
+                            <div v-if="msg.reasoning && msg.reasoning.length > 0">
+                                <div class="reasoning-section">
+                                    <span class="label">
+                                        <span>🧠 推理过程</span>
+<!--                                        <span class="badge">{{ msg.reasoning.length }} 步</span>-->
+                                    </span>
+                                    <span class="divider"></span>
+                                </div>
+                                <div class="reasoning-blocks">
+                                    <div v-for="(block, bi) in msg.reasoning" :key="bi" class="reasoning-block">
+                                        <div class="block-content" v-html="block.content"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="msg.answer || msg._answerComplete === false" class="answer-section">
+                                <div class="answer-label">最终答案</div>
+                                <div v-if="!msg.answer" class="thinking-placeholder">
+                                    <span class="dots">
+                                        <span></span><span></span><span></span>
+                                    </span>
+                                </div>
+                                <div class="answer-text" v-html="msg.answer"></div>
+                            </div>
+
+                            <div v-if="msg.error" class="error-message">
+                                ⚠️ {{ msg.error }}
+                            </div>
+
+
+                        </div>
+
+
+
+                    </template>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <div class="input-wrapper">
+            <el-input
+                    type="textarea"
+                    v-model="inputText"
+                    :rows="1"
+                    placeholder="输入你的问题，按 Enter 发送…"
+                    @keydown.native.enter.prevent="handleSend"
+                    :disabled="isProcessing"
+                    ref="inputArea"
+                    autofocus>
+            </el-input>
+            <el-button
+                    class="send-btn"
+                    :disabled="!inputText.trim() || isProcessing"
+                    @click="handleSend"
+                    type="primary">
+                <i class="el-icon-s-promotion"></i>
+                发送
+            </el-button>
+        </div>
+    </footer>
 </div>
 
 <script>
-    (function() {
-        // ---- DOM 元素 ----
-        const messagesEl = document.getElementById('messages');
-        const inputEl = document.getElementById('question-input');
-        const sendBtn = document.getElementById('send-btn');
-        const stopBtn = document.getElementById('stop-btn');
-
-        // ---- 全局状态 ----
-        let abortController = null;
-        let currentAiMessage = null;
-        let reasoningStepsContainer = null;
-        let answerContainer = null;
-        let isStreaming = false;
-        let typeTimers = [];
-
-        // ---- 推理队列 ----
-        let reasoningQueue = [];
-        let isProcessing = false;
-        let processingTimer = null;
-
-        // ---- 答案缓存 ----
-        let answerBuffer = [];
-        let answerShown = false;
-
-        // ===== 工具函数 =====
-        function addUserMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'message user';
-            div.textContent = text;
-            messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-            return div;
-        }
-
-        function createAiPlaceholder() {
-            if (currentAiMessage && !currentAiMessage.classList.contains('done')) {
-                finishAiMessage();
+    new Vue({
+        el: '#app',
+        data: {
+            inputText: '',
+            isProcessing: false,
+            messages: [
+                // 初始示例（静态）
+                // {
+                //     type: 'user',
+                //     content: '如何提高学习效率？'
+                // },
+                // {
+                //     type: 'ai',
+                //     reasoning: [{
+                //         title: '问题分析',
+                //         content: '用户希望了解提高学习效率的方法。这是一个关于学习策略和自我管理的综合性问题，需要从认知科学、时间管理和学习习惯等多个维度进行拆解。'
+                //     }, {
+                //         title: '知识检索',
+                //         content: '基于认知心理学和教育学的研究，高效学习的关键因素包括：<br>• 主动回忆 vs 被动重读<br>• 间隔重复 vs 集中突击<br>• 深度加工 vs 浅层浏览<br>• 专注状态 vs 多任务切换'
+                //     }, {
+                //         title: '逻辑推理与综合',
+                //         content: '结合上述理论，高效学习需要构建一个闭环系统：<strong>计划 → 专注执行 → 主动回顾 → 反馈调整</strong>。同时要警惕"学习错觉"——即看了=学会了，实际上只有经过测试和应用的知识才是真正掌握的。'
+                //     }],
+                //     answer: '提高学习效率的核心方法是：<strong>① 使用主动回忆</strong>（合上书本复述内容）；<strong>② 间隔重复</strong>（按艾宾浩斯曲线复习）；<strong>③ 费曼技巧</strong>（用自己的话解释概念）；<strong>④ 番茄工作法</strong>（25分钟专注+5分钟休息）。最重要的是，<strong>输出倒逼输入</strong>——通过做题、写作、教授他人来巩固知识。'
+                // }
+            ],
+            // ------------------- 新增：流式字符队列和定时器 -------------------
+            charQueue: [],          // 存储待显示的原子单元 { token, type, blockIndex, msgIndex }
+            streamTimer: null,      // setInterval 句柄
+            activeMsgIndex: null    // 当前正在流式输出的消息索引
+        },
+        mounted() {
+            this.$nextTick(() => {
+                this.scrollToBottom();
+                this.$refs.inputArea.focus();
+            });
+        },
+        beforeDestroy() {
+            // 清理定时器，避免内存泄漏
+            if (this.streamTimer) {
+                clearInterval(this.streamTimer);
+                this.streamTimer = null;
             }
-            answerShown = false;
-            const container = document.createElement('div');
-            container.className = 'message ai';
-
-            const details = document.createElement('details');
-            details.className = 'reasoning-details';
-            const summary = document.createElement('summary');
-            summary.textContent = '💭 思考过程';
-            details.appendChild(summary);
-            const stepsContainer = document.createElement('div');
-            stepsContainer.className = 'reasoning-steps';
-            details.appendChild(stepsContainer);
-            details.open = true;
-            container.appendChild(details);
-
-            const answerDiv = document.createElement('div');
-            answerDiv.className = 'answer';
-            const cursor = document.createElement('span');
-            cursor.className = 'cursor';
-            answerDiv.appendChild(cursor);
-            container.appendChild(answerDiv);
-
-            messagesEl.appendChild(container);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-
-            currentAiMessage = container;
-            reasoningStepsContainer = stepsContainer;
-            answerContainer = answerDiv;
-            return container;
-        }
-
-        // ---- 逐字显示答案 ----
-        function displayAnswer(content, isEnd) {
-            if (!answerContainer) createAiPlaceholder();
-            const cursor = answerContainer.querySelector('.cursor');
-            if (!cursor) {
-                const node = document.createTextNode(content);
-                answerContainer.appendChild(node);
-                if (isEnd) finishAiMessage();
-                return;
+        },
+        watch: {
+            messages: {
+                handler() {
+                    this.$nextTick(() => {
+                        this.scrollToBottom();
+                    });
+                },
+                deep: true
             }
-            let index = 0;
-            function typeNextChar() {
-                if (index < content.length) {
-                    const charNode = document.createTextNode(content[index]);
-                    answerContainer.insertBefore(charNode, cursor);
-                    index++;
-                    messagesEl.scrollTop = messagesEl.scrollHeight;
-                    const timer = setTimeout(typeNextChar, 20);
-                    typeTimers.push(timer);
-                } else {
-                    if (isEnd) finishAiMessage();
+        },
+        methods: {
+            // ---------- 发送消息 ----------
+            handleSend() {
+                const text = this.inputText.trim();
+                if (!text || this.isProcessing) return;
+
+                // 清空旧队列和定时器
+                if (this.streamTimer) {
+                    clearInterval(this.streamTimer);
+                    this.streamTimer = null;
                 }
-            }
-            typeNextChar();
-        }
+                this.charQueue = [];
+                this.activeMsgIndex = null;
 
-        // ---- 处理推理队列（串行逐个显示） ----
-        function processQueue() {
-            if (isProcessing) return;
-            if (reasoningQueue.length === 0) {
-                // 队列为空，显示缓存答案
-                showCachedAnswers();
-                return;
-            }
-            isProcessing = true;
-            const item = reasoningQueue.shift();
-            const step = document.createElement('div');
-            step.className = 'step';
-            step.textContent = item.content;
-            reasoningStepsContainer.appendChild(step);
-            const details = currentAiMessage?.querySelector('.reasoning-details');
-            if (details) details.open = true;
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+                // 添加用户消息
+                this.messages.push({
+                    type: 'user',
+                    content: text
+                });
+                this.inputText = '';
+                this.isProcessing = true;
 
-            // 延迟后处理下一个
-            processingTimer = setTimeout(() => {
-                isProcessing = false;
-                processQueue();
-            }, 300); // 300ms 间隔，肉眼可见逐个出现
-        }
+                // 创建 AI 消息占位
+                const aiIdx = this.messages.length;
+                this.messages.push({
+                    type: 'ai',
+                    thinking: true,
+                    reasoning: [],
+                    answer: '',
+                    _answerComplete: false,
+                    error: null
+                });
 
-        // ---- 显示缓存的答案 ----
-        function showCachedAnswers() {
-            if (answerShown) return;
-            if (answerBuffer.length === 0) return;
-            let fullAnswer = '';
-            for (let item of answerBuffer) {
-                fullAnswer += item.content;
-            }
-            answerBuffer = [];
-            answerShown = true;
-            displayAnswer(fullAnswer, true);
-        }
+                // 调用 SSE
+                this.fetchSSE(text, aiIdx);
+            },
 
-        // ---- 添加推理事件 ----
-        function appendReasoning(content) {
-            if (!reasoningStepsContainer) createAiPlaceholder();
-            reasoningQueue.push({ content });
-            if (!isProcessing) {
-                processQueue();
-            }
-        }
-
-        // ---- 添加答案片段 ----
-        function appendAnswer(content) {
-            if (!answerContainer) createAiPlaceholder();
-            answerBuffer.push({ content });
-        }
-
-        // ---- 完成当前 AI 消息 ----
-        function finishAiMessage() {
-            if (currentAiMessage) {
-                if (answerContainer) {
-                    const cursor = answerContainer.querySelector('.cursor');
-                    if (cursor) cursor.remove();
-                }
-                currentAiMessage.classList.add('done');
-                if (reasoningStepsContainer && reasoningStepsContainer.children.length === 0) {
-                    const details = currentAiMessage.querySelector('.reasoning-details');
-                    if (details) details.style.display = 'none';
-                }
-                currentAiMessage = null;
-                reasoningStepsContainer = null;
-                answerContainer = null;
-            }
-            // 清理队列和缓存
-            reasoningQueue = [];
-            isProcessing = false;
-            if (processingTimer) { clearTimeout(processingTimer); processingTimer = null; }
-            answerBuffer = [];
-            answerShown = false;
-        }
-
-        // ---- 重置所有状态 ----
-        function resetAll() {
-            stopAllTypers();
-            reasoningQueue = [];
-            isProcessing = false;
-            if (processingTimer) { clearTimeout(processingTimer); processingTimer = null; }
-            answerBuffer = [];
-            answerShown = false;
-            if (currentAiMessage) finishAiMessage();
-        }
-
-        // ---- 停止打字机 ----
-        function stopAllTypers() {
-            typeTimers.forEach(timer => clearTimeout(timer));
-            typeTimers = [];
-        }
-
-        // ---- 错误显示 ----
-        function showError(text) {
-            const div = document.createElement('div');
-            div.className = 'message error-msg';
-            div.textContent = '⚠️ ' + text;
-            messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        function clearInput() {
-            inputEl.value = '';
-            inputEl.focus();
-        }
-
-        function setStreamingState(streaming) {
-            isStreaming = streaming;
-            sendBtn.disabled = streaming;
-            if (streaming) {
-                stopBtn.classList.add('show');
-            } else {
-                stopBtn.classList.remove('show');
-                abortController = null;
-            }
-        }
-
-        // ---- 取消请求 ----
-        function cancelStream() {
-            if (abortController) {
-                abortController.abort();
-                abortController = null;
-            }
-            resetAll();
-            setStreamingState(false);
-            const hint = document.createElement('div');
-            hint.className = 'message ai';
-            hint.style.cssText = 'color:#999; font-size:13px; background:transparent; align-self:center;';
-            hint.textContent = '⏹ 已停止生成';
-            messagesEl.appendChild(hint);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-            clearInput();
-            sendBtn.disabled = false;
-        }
-
-        // ---- 处理 SSE 事件 ----
-        function handleSseEvent(event, rawData) {
-            let content = rawData;
-            let isEnd = false;
-            try {
-                const parsed = JSON.parse(rawData);
-                content = parsed.content || '';
-                isEnd = parsed.is_end || false;
-            } catch (e) {
-                content = rawData;
-                isEnd = false;
-            }
-
-            switch (event) {
-                case 'reasoning':
-                    appendReasoning(content);
-                    break;
-                case 'answer':
-                case 'chunk':
-                    appendAnswer(content);
-                    break;
-                case 'end':
-                    // 强制显示答案
-                    showCachedAnswers();
-                    // 清空可能残留的推理队列
-                    if (reasoningQueue.length > 0) {
-                        reasoningQueue = [];
-                        isProcessing = false;
-                        if (processingTimer) { clearTimeout(processingTimer); processingTimer = null; }
-                    }
-                    break;
-                case 'error':
-                    showError('服务端错误: ' + content);
-                    resetAll();
-                    if (abortController) abortController.abort();
-                    break;
-                default:
-                    if (content) appendAnswer(content);
-                    if (isEnd) showCachedAnswers();
-                    break;
-            }
-        }
-
-        // ---- 发送消息 ----
-        async function sendMessage() {
-            const question = inputEl.value.trim();
-            if (!question) return;
-            if (isStreaming) return;
-
-            resetAll();
-            addUserMessage(question);
-            clearInput();
-            createAiPlaceholder();
-
-            setStreamingState(true);
-            abortController = new AbortController();
-
-            try {
-                const response = await fetch('http://127.0.0.1:8888/agent/chat', {
+            // ---------- SSE 请求 ----------
+            fetchSSE(question, msgIndex) {
+                const url = '/agent/chat';
+                const options = {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'text/event-stream',
-                        'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
-                        'Connection': 'keep-alive',
                     },
-                    body: JSON.stringify({ question }),
-                    signal: abortController.signal,
-                });
+                    body: JSON.stringify({ question: question }),
+                };
 
-                if (!response.ok) {
-                    let errMsg = `服务器错误 (${response.status})`;
-                    try {
-                        const errorBody = await response.text();
-                        if (errorBody) errMsg = errorBody;
-                    } catch (_) {}
-                    throw new Error(errMsg);
-                }
+                fetch(url, options)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder('utf-8');
+                        let buffer = '';
+                        const readStream = () => {
+                            reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    this.finishAI(msgIndex);
+                                    return;
+                                }
+                                buffer += decoder.decode(value, { stream: true });
+                                const lines = buffer.split('\n\n');
+                                buffer = lines.pop() || '';
+                                for (const event of lines) {
+                                    if (event.trim() === '') continue;
+                                    this.processSSEEvent(event, msgIndex);
+                                }
+                                readStream();
+                            }).catch(err => {
+                                this.handleError(msgIndex, '读取流数据失败: ' + err.message);
+                            });
+                        };
+                        readStream();
+                    })
+                    .catch(err => {
+                        this.handleError(msgIndex, '请求失败: ' + err.message);
+                    });
+            },
 
-                const contentType = response.headers.get('content-type') || '';
-                if (!contentType.includes('text/event-stream')) {
-                    const text = await response.text();
-                    try {
-                        const json = JSON.parse(text);
-                        if (json.reasoning) appendReasoning(json.reasoning);
-                        if (json.answer) appendAnswer(json.answer);
-                        else if (json.message) appendAnswer(json.message);
-                    } catch (_) {
-                        appendAnswer(text);
+            // ---------- 处理 SSE 事件 ----------
+            processSSEEvent(eventData, msgIndex) {
+                const lines = eventData.split('\n');
+                let eventType = null;
+                let dataLine = '';
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('event:')) {
+                        eventType = trimmed.substring(6).trim();
+                    } else if (trimmed.startsWith('data:')) {
+                        dataLine = trimmed.substring(5).trim();
                     }
-                    showCachedAnswers();
-                    setStreamingState(false);
+                }
+                if (!dataLine) return;
+
+                let data = null;
+                try {
+                    data = JSON.parse(dataLine);
+                } catch (e) {
+                    // 非 JSON，直接当普通文本追加（兼容）
+                    const msg = this.messages[msgIndex];
+                    if (msg && msg.answer !== undefined) {
+                        // 将普通文本也加入队列（拆分成字符）
+                        this.enqueueContent(msgIndex, 'answer', dataLine, 0);
+                    }
                     return;
                 }
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder('utf-8');
-                let buffer = '';
-                let currentEvent = 'message';
-                let currentData = '';
+                this.updateAIFromEvent(data, msgIndex, eventType);
+            },
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+            // ---------- 更新 AI 消息（核心改造） ----------
+            updateAIFromEvent(data, msgIndex, eventType) {
+                const msg = this.messages[msgIndex];
+                if (!msg) return;
 
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || '';
+                const type = data.type;
 
-                    for (const line of lines) {
-                        if (line.startsWith(':')) continue;
-                        if (line.startsWith('event:')) {
-                            currentEvent = line.slice(6).trim();
-                        } else if (line.startsWith('data:')) {
-                            const dataValue = line.slice(5);
-                            const trimmed = dataValue.startsWith(' ') ? dataValue.slice(1) : dataValue;
-                            if (currentData) currentData += '\n' + trimmed;
-                            else currentData = trimmed;
-                        } else if (line === '') {
-                            if (currentData !== '') {
-                                handleSseEvent(currentEvent, currentData);
-                                currentData = '';
-                                currentEvent = 'message';
-                            }
+                if (type === 'reasoning' || type === 'answer') {
+                    if (data.content) {
+                        const blockIndex = type === 'reasoning' ? (data.index !== undefined ? data.index : 0) : null;
+                        // 将内容拆成原子单元（标签、实体、字符）并入队
+                        this.enqueueContent(msgIndex, type, data.content, blockIndex);
+                        // 移除 thinking 状态
+                        if (msg.thinking) msg.thinking = false;
+                        // 启动定时器（如果尚未启动）
+                        this.startStreamTimer();
+                    }
+                } else if (type === 'done' || type === 'end') {
+                    msg._answerComplete = true;
+                    this.isProcessing = false;
+                    this.$refs.inputArea.focus();
+                    // 流结束，但定时器会继续消费完队列
+                } else {
+                    // 未知类型，按普通文本追加
+                    if (data.content) {
+                        this.enqueueContent(msgIndex, 'answer', data.content, 0);
+                        this.startStreamTimer();
+                    }
+                }
+            },
+
+            // ---------- 将内容拆分成原子并入队 ----------
+            enqueueContent(msgIndex, type, content, blockIndex) {
+                const tokens = this.tokenizeHTML(content);
+                for (let token of tokens) {
+                    this.charQueue.push({
+                        token: token,
+                        type: type,
+                        blockIndex: blockIndex,
+                        msgIndex: msgIndex
+                    });
+                }
+            },
+
+            // ---------- 将 HTML 拆成原子（标签/实体/单字符） ----------
+            tokenizeHTML(html) {
+                const tokens = [];
+                const regex = /(<[^>]+>)|(&[a-zA-Z]+;)|([^<&]+)/g;
+                let match;
+                while ((match = regex.exec(html)) !== null) {
+                    if (match[1]) {
+                        // 完整标签
+                        tokens.push(match[1]);
+                    } else if (match[2]) {
+                        // 实体符号（如 &nbsp;）
+                        tokens.push(match[2]);
+                    } else if (match[3]) {
+                        // 普通文本，拆成单个字符
+                        const chars = match[3].split('');
+                        for (let ch of chars) {
+                            tokens.push(ch);
                         }
                     }
                 }
+                return tokens;
+            },
 
-                // 流结束，强制显示缓存答案
-                showCachedAnswers();
-                if (currentAiMessage) finishAiMessage();
+            // ---------- 启动流式定时器 ----------
+            startStreamTimer() {
+                if (this.streamTimer) return;
+                this.streamTimer = setInterval(() => {
+                    if (this.charQueue.length === 0) {
+                        // 队列为空时，若流已结束则清除定时器
+                        if (!this.isProcessing) {
+                            clearInterval(this.streamTimer);
+                            this.streamTimer = null;
+                        }
+                        return;
+                    }
 
-            } catch (err) {
-                if (err.name === 'AbortError') return;
-                resetAll();
-                showError(err.message || '请求失败，请重试');
-            } finally {
-                if (!abortController || !abortController.signal.aborted) {
-                    setStreamingState(false);
-                    if (currentAiMessage) finishAiMessage();
+                    const item = this.charQueue.shift();
+                    const msg = this.messages[item.msgIndex];
+                    if (!msg) return;
+
+                    if (item.type === 'answer') {
+                        msg.answer += item.token;
+                    } else if (item.type === 'reasoning') {
+                        const idx = item.blockIndex || 0;
+                        while (msg.reasoning.length <= idx) {
+                            msg.reasoning.push({ title: '', content: '' });
+                        }
+                        msg.reasoning[idx].content += item.token;
+                    }
+
+                    // 滚动到底部
+                    this.scrollToBottom();
+                }, 30); // 每 30ms 一个原子
+            },
+
+            // ---------- 错误处理 ----------
+            handleError(msgIndex, errorMsg) {
+                const msg = this.messages[msgIndex];
+                if (msg) {
+                    msg.thinking = false;
+                    msg.error = errorMsg;
+                    msg._answerComplete = true;
                 }
-                abortController = null;
-                sendBtn.disabled = false;
+                this.isProcessing = false;
+                if (this.streamTimer) {
+                    clearInterval(this.streamTimer);
+                    this.streamTimer = null;
+                }
+                this.charQueue = [];
+                console.error('SSE Error:', errorMsg);
+                this.$refs.inputArea.focus();
+            },
+
+            // ---------- 流结束 ----------
+            finishAI(msgIndex) {
+                const msg = this.messages[msgIndex];
+                if (msg) {
+                    msg.thinking = false;
+                    msg._answerComplete = true;
+                }
+                this.isProcessing = false;
+                // 队列可能在消费中，定时器会自行停止
+                this.$refs.inputArea.focus();
+            },
+
+            // ---------- 滚动到底部 ----------
+            scrollToBottom() {
+                const container = this.$refs.mainContainer;
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
             }
         }
-
-        // ---- 事件绑定 ----
-        sendBtn.addEventListener('click', sendMessage);
-        stopBtn.addEventListener('click', cancelStream);
-        inputEl.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        inputEl.focus();
-        window.__chat = { sendMessage, cancelStream };
-    })();
+    });
 </script>
+
 </body>
 </html>

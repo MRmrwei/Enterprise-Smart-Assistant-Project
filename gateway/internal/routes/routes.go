@@ -17,7 +17,8 @@ func Register(server *gateway.Server, app app.Application) {
 
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
-		Path:    "/view/:file", // 匹配 /static/ 开头的任何请求
+		Path:    "/view/:file",
 		Handler: http.StripPrefix("/view/", http.FileServer(http.Dir("./view"))).ServeHTTP,
 	})
+
 }
