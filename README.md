@@ -104,3 +104,9 @@ graph TB
     D -->|HTTP/SSE| C
     D -->|Chroma| F
 ```
+
+## 🔭 后续优化规划
+
+- [ ] 增加 docker 部署制作
+- [ ] 检查点存储迁移至 PostgreSQL / Redis，支持持久化与分布式部署
+- [ ] RAG 检索优化：① 索引增强（元数据+父子块） → ② 混合召回（BM25+向量） → ③ 精排压缩（Rerank+上下文压缩）
