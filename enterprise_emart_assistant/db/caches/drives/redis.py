@@ -13,30 +13,37 @@ class Redis(BaseCache):
         db = config.get("CACHE_DB", 0)
         host = config.get("CACHE_HOST", "127.0.0.1")
         max_conn = config.get("CACHE_MAX_CONN", 20)
+        
+        # 兼容低版本redis
+        protocol = config.get("CACHE_PROTOCOL", 3)
         conn = redis.ConnectionPool(
-            host=host, port=prot, db=db, max_connections=max_conn,socket_timeout=5,decode_responses=True
+            host=host,
+            port=prot,
+            db=db,
+            max_connections=max_conn,
+            socket_timeout=5,
+            protocol=protocol,
+            decode_responses=True,
         )
         self.client = redis.Redis(connection_pool=conn)
 
     def get(self, key, default=None):
         return self.client.get(key) or default
 
-
     def set(self, key, value):
         return self.client.set(key, value)
-        
-    
+
     def setex(self, key, value, seconds: int):
         return self.client.setex(key, seconds, value)
-    
-    
+
     def delete(self, key):
         return self.client.delete(key)
-    
+
     def expire(self, key, seconds: int):
         return self.client.expire(key, seconds)
-    
-    
+
     def ttl(self, key):
         return self.client.ttl(key)
-    
+
+    def flush(self):
+        return self.client.flushdb()

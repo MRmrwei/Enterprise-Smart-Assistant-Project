@@ -3,6 +3,8 @@ import json
 import re
 from graphs.main_graph import main_graph
 from services.sse import SSEContent
+from langgraph.types import Command
+from db.caches.client import cache
 
 
 class AgentService:
@@ -10,29 +12,66 @@ class AgentService:
     async def Chat(
         self, question: str, state: dict | None = None, config: dict | None = None
     ):
-        round_num = 0
-        async for model, data in main_graph.astream(
-            state, config, stream_mode=["custom", "updates"]
-        ):
+        thread_id = config.get("configurable", {}).get("thread_id")
+        interrupt = cache.get(f"{thread_id}:interrupts", None)
+        if interrupt is not None:
+            print("进入    interrupts")
+            cache.delete(f"{thread_id}:interrupts")
+            """
+            交互流程
+            """
+            round_num = 0
+            async for namespace, model, data in main_graph.astream(
+                Command(resume=question),
+                config=config,
+                stream_mode=["custom", "updates"],
+                subgraphs=True,
+            ):
+                if model == "custom":
+                    content = data.get("content")
+                    type = data.get("type")
+                    print(f"content {content}")
 
-            if model == "custom":
-                content = data.get("content")
-                type = data.get("type")
-                print(f"content {content}")
+                    async for char in self.intelligentStreamer(content, type):
+                        if type == "reasoning":
+                            char["index"] = round_num
+                        yield SSEContent(char)
 
-                async for char in self.intelligentStreamer(content, type):
                     if type == "reasoning":
-                        char["index"] = round_num
+                        round_num += 1
+
+            current_state = await main_graph.aget_state(config)
+            if current_state.interrupts:
+                interrupt = current_state.interrupts[0]
+                cache.set(f"{thread_id}:interrupts", interrupt.id)
+                async for char in self.intelligentStreamer(interrupt.value, "answer"):
                     yield SSEContent(char)
 
-                if type == "reasoning":
-                    round_num += 1
-            # elif model == "updates":
+        else:
+            round_num = 0
+            async for namespace, model, data in main_graph.astream(
+                state, config, stream_mode=["custom", "updates"], subgraphs=True
+            ):
+                if model == "custom":
+                    content = data.get("content")
+                    type = data.get("type")
+                    print(f"content {content}")
 
-            #     # print(data)
+                    async for char in self.intelligentStreamer(content, type):
+                        if type == "reasoning":
+                            char["index"] = round_num
+                        yield SSEContent(char)
 
-            #     if "init_node" in data:
-            #         pass
+                    if type == "reasoning":
+                        round_num += 1
+
+            current_state = await main_graph.aget_state(config)
+            if current_state.interrupts:
+                interrupt = current_state.interrupts[0]
+                cache.set(f"{thread_id}:interrupts", interrupt.id)
+                async for char in self.intelligentStreamer(interrupt.value, "answer"):
+                    yield SSEContent(char)
+
         yield SSEContent("{}", "end")
 
     async def intelligentStreamer(self, full_text: str, type: str):

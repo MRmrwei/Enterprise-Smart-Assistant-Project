@@ -36,8 +36,9 @@ func (this *LoginImpl) Login(ctx context.Context, account string, password strin
 
 	claims := jwt.MapClaims{
 		"name": userModel.Nickname,
+		"uid":  userModel.ID,
 		"iat":  time.Now().Unix(),
-		"exp":  time.Now().Add(time.Duration(this.app.GetConfig().AuthConfig.AccessExpire) * time.Second),
+		"exp":  time.Now().Add(time.Duration(this.app.GetConfig().AuthConfig.AccessExpire) * time.Second).Unix(),
 	}
 
 	token, err := this.tokenImpl.AccessToken(claims)

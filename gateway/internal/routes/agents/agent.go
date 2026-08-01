@@ -1,11 +1,13 @@
 package agents
 
 import (
+	"encoding/json"
 	"fmt"
 	"gateway/internal/svc/app"
 	"gateway/pb"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"log"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 
 type ChatReq struct {
 	Question string `json:"question"`
+	ThreadId string `json:"threadId,omitempty"`
 }
 
 func (Chat *ChatReq) Validate() error {
@@ -27,10 +30,20 @@ func Chat(agentRpc app.AgentRpc) http.HandlerFunc {
 			logx.Debug("err = ", err)
 			return
 		}
-
 		ctx := r.Context()
+
+		logx.Debug()
+
+		md := metadata.Pairs(
+			"uid", ctx.Value("uid").(json.Number).String(),
+		)
+		//// 或者使用 map 方式: metadata.New(map[string]string{"authorization": authHeader, ...})
+		//
+		//// 4. 将 metadata 注入到 context 中
+		ctx = metadata.NewOutgoingContext(ctx, md)
 		stream, err := agentRpc.Client().Chat(ctx, &pb.ChatRequest{
 			Question: chatReq.Question,
+			ThreadId: chatReq.ThreadId,
 		})
 
 		if err != nil {

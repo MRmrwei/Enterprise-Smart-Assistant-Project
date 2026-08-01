@@ -8,8 +8,12 @@ import (
 type Config struct {
 	gateway.GatewayConf
 	AgentRpcConfig zrpc.RpcClientConf
-	Auth           struct {
-		AccessSecret string
-		AccessExpire int64
-	}
+	AuthConfig     AuthConfig
+}
+
+type AuthConfig struct {
+	AccessSecret  string
+	AccessExpire  int
+	RefreshSecret string
+	RefreshExpire int
 }

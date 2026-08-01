@@ -6,6 +6,7 @@ option go_package = "./pb";
 
 message ChatRequest {
   string question = 1;
+  string threadId = 3;
 }
 
 message ChatResponse {

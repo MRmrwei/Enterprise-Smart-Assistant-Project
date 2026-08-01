@@ -4,7 +4,7 @@ from db.caches.drives.redis import Redis
 from db.caches.drives.local import LoacalCache
 
 
-def getCache() -> BaseCache:
+def _getCache() -> BaseCache:
     tpye = config.get("CACHE", "local")
     if tpye == "redis":
         return Redis()
@@ -13,4 +13,4 @@ def getCache() -> BaseCache:
     raise Exception("暂不支持的缓存驱动")
 
 
-cache = getCache()
+cache = _getCache()

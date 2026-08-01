@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "aspose-words-foss>=26.5.0",
+    "cacheout>=0.16.0",
     "chromadb>=1.5.9",
     "docx2txt>=0.9",
     "grpcio>=1.83.0",
@@ -20,6 +21,7 @@ dependencies = [
     "langchain-skills-adapters>=0.1.6",
     "langgraph>=1.2.9",
     "load-dotenv>=0.1.0",
+    "redis[hiredis]>=8.1.0",
 ]
 
 [dependency-groups]

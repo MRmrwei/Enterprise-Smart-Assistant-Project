@@ -2,9 +2,11 @@ Name: gateway-api
 Host: 0.0.0.0
 Port: 8888
 
-Auth:
-  AccessSecret: "your-32-char-secret-key"
-  AccessExpire: 86400
+AuthConfig:
+  AccessSecret: "{B)N;+)kTKDxHq@NERDUqS?A34OgzU-k"
+  AccessExpire: 31536000
+  RefreshSecret: "UVzF%8qe]b5*+lQ;N<PYU}T-K<,IL8T-"  # 独立的 Refresh Token 密钥
+  RefreshExpire: 604800     # Refresh Token 有效期：7天（秒）
 
 
 Upstreams:

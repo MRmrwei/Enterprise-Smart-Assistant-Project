@@ -13,7 +13,7 @@ func Register(server *gateway.Server, app app.Application) {
 		Method:  http.MethodPost,
 		Path:    "/agent/chat",
 		Handler: agents.Chat(app),
-	}, rest.WithSSE(), rest.WithTimeout(0))
+	}, rest.WithSSE(), rest.WithTimeout(0), rest.WithJwt(app.Config().AuthConfig.AccessSecret))
 
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,

@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.types import Command, interrupt
+from langgraph.config import get_stream_writer
 
 
 class BaseExecutorAgent:
@@ -188,7 +189,8 @@ class BaseExecutorAgent:
             ).ainvoke(messages)
 
             print(f"智能流程决策结果：{result}")
-
+            writer = get_stream_writer()
+            writer({"type": "reasoning", "content": result.reason})
             if result.node == "parent":
 
                 latest_user_message = state.get("agent_attributes", {}).get(
@@ -205,6 +207,7 @@ class BaseExecutorAgent:
                 update={"agent_attributes": {"is_interrupt": result.is_interrupt}},
             )
         except Exception as e:
+            print(f"智能流程决策错误：{e}")
             return Command(goto=END, update={"answer": str(e)})
 
     async def _confirm_node(self, state: AgentState):
@@ -231,7 +234,8 @@ class BaseExecutorAgent:
             ] + sub_messages
 
         res = await self.with_tools_llm().ainvoke(messages)
-
+        writer = get_stream_writer()
+        writer({"type": "reasoning", "content": res.content})
         return {
             "sub_messages": [res],
             "agent_attributes": {"latest_user_message": confirm_msg},

@@ -11,7 +11,7 @@ class BaseCache(ABC):
         pass
 
     @abstractmethod
-    def setex(self, key: str, value, seconds: int):
+    def setex(self, key, value, seconds: int):
         pass
 
     @abstractmethod

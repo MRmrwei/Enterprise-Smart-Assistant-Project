@@ -10,10 +10,6 @@ from pydantics.intentions import Intention
 
 def route_node(state: AgentState):
     
-    
-    writer = get_stream_writer()
-    
-    writer({"type": "reasoning", "content": "你好，世界！这是一段通过流式传输呈现的文字，模拟打字机的效果。"})
     intentions: Intention | None = state.get("intentions", None)
 
     if intentions is None:
