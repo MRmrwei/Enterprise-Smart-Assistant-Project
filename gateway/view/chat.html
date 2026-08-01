@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 对话助手 · SSE 流式</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/theme-chalk/index.css" />
+    <link rel="stylesheet" href="./main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/index.js"></script>
+    <style>
+        /* 简单内联样式，避免缺失 main.css 导致布局错乱 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            box-shadow: 0 0 30px rgba(0,0,0,0.06);
+        }
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e8ecf1;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo .icon {
+            font-size: 22px;
+            color: #409EFF;
+        }
+        .logo h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2f3d;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #67c23a;
+        }
+        .status .dot {
+            width: 8px;
+            height: 8px;
+            background: #67c23a;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .logout-btn {
+            font-size: 13px;
+            color: #606266;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            border: 1px solid #dcdfe6;
+            background: transparent;
+            line-height: 1.6;
+        }
+        .logout-btn:hover {
+            color: #f56c6c;
+            border-color: #f56c6c;
+            background: #fef0f0;
+        }
+        .app-main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            background: #fafbfc;
+        }
+        .messages {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #909399;
+        }
+        .empty-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+        .empty-text {
+            font-size: 20px;
+            font-weight: 500;
+            color: #303133;
+        }
+        .empty-sub {
+            font-size: 14px;
+            margin-top: 8px;
+            color: #c0c4cc;
+        }
+        .message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        .message .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+            color: #fff;
+        }
+        .message.user .avatar {
+            background: #409EFF;
+        }
+        .message.ai .avatar {
+            background: #9b9b9b;
+        }
+        .message .bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.6;
+            font-size: 15px;
+            word-break: break-word;
+            background: #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .message.user .bubble {
+            background: #409EFF;
+            color: #fff;
+        }
+        .message.ai .bubble {
+            background: #ffffff;
+            border: 1px solid #e8ecf1;
+        }
+        .thinking-placeholder {
+            color: #909399;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+        }
+        .dots span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #909399;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: dot-bounce 1.4s infinite both;
+        }
+        .dots span:nth-child(1) { animation-delay: 0s; }
+        .dots span:nth-child(2) { animation-delay: 0.2s; }
+        .dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dot-bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .reasoning-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #606266;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        .reasoning-section .badge {
+            background: #e8ecf1;
+            padding: 0 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            color: #606266;
+        }
+        .divider {
+            flex: 1;
+            border-bottom: 1px dashed #dcdfe6;
+        }
+        .reasoning-blocks {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .reasoning-block {
+            background: #f4f6f9;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #303133;
+            border-left: 3px solid #409EFF;
+        }
+        .block-content p {
+            margin: 0;
+        }
+        .block-content strong {
+            color: #409EFF;
+        }
+        .answer-section {
+            border-top: 1px solid #e8ecf1;
+            padding-top: 10px;
+            margin-top: 4px;
+        }
+        .answer-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #606266;
+            margin-bottom: 6px;
+        }
+        .answer-text {
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .answer-text strong {
+            color: #409EFF;
+        }
+        .error-message {
+            color: #f56c6c;
+            background: #fef0f0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .app-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e8ecf1;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .input-wrapper .el-textarea {
+            flex: 1;
+        }
+        .input-wrapper .el-textarea .el-textarea__inner {
+            border-radius: 10px;
+            resize: none;
+            font-size: 15px;
+            padding: 10px 14px;
+            min-height: 48px;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+        .send-btn {
+            height: 48px;
+            padding: 0 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .send-btn i {
+            margin-right: 4px;
+        }
+        /* 消息内 html 元素保留样式 */
+        .message.ai .bubble ul, .message.ai .bubble ol {
+            padding-left: 20px;
+            margin: 4px 0;
+        }
+        .message.ai .bubble li {
+            margin: 2px 0;
+        }
+        .message.ai .bubble code {
+            background: #f4f6f9;
+            padding: 0 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #e96900;
+        }
+        .message.ai .bubble pre {
+            background: #f4f6f9;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .message.ai .bubble blockquote {
+            border-left: 4px solid #409EFF;
+            padding-left: 12px;
+            color: #606266;
+            margin: 6px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header class="app-header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="icon">✦</span>
+                <h1>AI 对话助手</h1>
+            </div>
+            <div class="status">
+                <span class="dot"></span>
+                <span>在线 · SSE 流式</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <!-- 退出登录按钮 -->
+            <button class="logout-btn" @click="handleLogout" :disabled="isLoggingOut">
+                <i class="el-icon-switch-button"></i>
+                {{ isLoggingOut ? '退出中...' : '退出登录' }}
+            </button>
+        </div>
+    </header>
+
+    <main class="app-main" ref="mainContainer">
+        <div class="messages">
+            <div v-if="messages.length === 0" class="empty-state">
+                <div class="empty-icon">💬</div>
+                <div class="empty-text">开始你的第一次对话</div>
+                <div class="empty-sub">输入问题，AI 将流式展示推理过程</div>
+            </div>
+
+            <div v-for="(msg, idx) in messages" :key="idx" class="message" :class="msg.type">
+                <div class="avatar">
+                    {{ msg.type === 'ai' ? 'AI' : '我' }}
+                </div>
+                <div class="bubble">
+                    <template v-if="msg.type === 'user'">
+                        <div class="text">{{ msg.content }}</div>
+                    </template>
+                    <template v-if="msg.type === 'ai'">
+                        <div v-if="msg.thinking" class="thinking-placeholder">
+                            <span>正在思考</span>
+                            <span class="dots">
+                                <span></span><span></span><span></span>
+                            </span>
+                        </div>
+                        <div class="ai-reply">
+                            <div v-if="msg.reasoning && msg.reasoning.length > 0">
+                                <div class="reasoning-section">
+                                    <span class="label">
+                                        <span>🧠 推理过程</span>
+                                    </span>
+                                    <span class="divider"></span>
+                                </div>
+                                <div class="reasoning-blocks">
+                                    <div v-for="(block, bi) in msg.reasoning" :key="bi" class="reasoning-block">
+                                        <div class="block-content" v-html="block.content"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="msg.answer || msg._answerComplete === false" class="answer-section">
+                                <div class="answer-label">最终答案</div>
+                                <div v-if="!msg.answer" class="thinking-placeholder">
+                                    <span class="dots">
+                                        <span></span><span></span><span></span>
+                                    </span>
+                                </div>
+                                <div class="answer-text" v-html="msg.answer"></div>
+                            </div>
+                            <div v-if="msg.error" class="error-message">
+                                ⚠️ {{ msg.error }}
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <div class="input-wrapper">
+            <el-input
+                    type="textarea"
+                    v-model="inputText"
+                    :rows="1"
+                    placeholder="输入你的问题，按 Enter 发送…"
+                    @keydown.native.enter.prevent="handleSend"
+                    :disabled="isProcessing"
+                    ref="inputArea"
+                    autofocus>
+            </el-input>
+            <el-button
+                    class="send-btn"
+                    :disabled="!inputText.trim() || isProcessing"
+                    @click="handleSend"
+                    type="primary">
+                <i class="el-icon-s-promotion"></i>
+                发送
+            </el-button>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // ---------- 工具函数：获取 Token ----------
+    function getToken() {
+        return localStorage.getItem('chat_token');
+    }
+
+    // ---------- 工具函数：跳转到登录页 ----------
+    function redirectToLogin() {
+        window.location.href = 'http://127.0.0.1:8888/view/login.html';
+    }
+
+    new Vue({
+        el: '#app',
+        data: {
+            inputText: '',
+            isProcessing: false,
+            messages: [],
+            charQueue: [],
+            threadId: "",
+            streamTimer: null,
+            activeMsgIndex: null,
+            isLoggingOut: false  // 退出登录 loading 状态
+        },
+        mounted() {
+            // ---------- 1. 检查 Token，不存在则跳转 ----------
+            const token = getToken();
+            if (!token) {
+                redirectToLogin();
+                return;
+            }
+
+            this.$nextTick(() => {
+                this.scrollToBottom();
+                this.$refs.inputArea.focus();
+            });
+        },
+        beforeDestroy() {
+            if (this.streamTimer) {
+                clearInterval(this.streamTimer);
+                this.streamTimer = null;
+            }
+        },
+        watch: {
+            messages: {
+                handler() {
+                    this.$nextTick(() => {
+                        this.scrollToBottom();
+                    });
+                },
+                deep: true
+            }
+        },
+        methods: {
+            // ---------- 退出登录 ----------
+            async handleLogout() {
+                if (this.isLoggingOut) return;
+                this.isLoggingOut = true;
+
+                const token = getToken();
+                try {
+                    // const response = await fetch('http://127.0.0.1:8888/logout', {
+                    //     method: 'POST',
+                    //     headers: {
+                    //         'Content-Type': 'application/json',
+                    //         'Authorization': token ? 'Bearer ' + token : ''
+                    //     }
+                    // });
+                    //
+                    // // 无论后端是否成功，都清除本地 token 并跳转
+                    // // 但如果后端返回错误，我们仍然清除本地，因为用户主动退出
+                    // if (!response.ok) {
+                    //     console.warn('Logout API returned non-200:', response.status);
+                    // }
+                    //
+                    // // 尝试解析响应（如果有）
+                    // try {
+                    //     const result = await response.json();
+                    //     console.log('Logout response:', result);
+                    // } catch (e) {
+                    //     // 忽略 JSON 解析错误
+                    // }
+
+                    // 清除本地 token
+                    localStorage.removeItem('chat_token');
+
+                    // 使用 Element UI 提示（可选）
+                    this.$message({
+                        message: '已退出登录',
+                        type: 'success',
+                        duration: 1500
+                    });
+
+                    // 跳转到登录页
+                    setTimeout(() => {
+                        redirectToLogin();
+                    }, 300);
+
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    // 即使请求失败，也清除 token 并跳转
+                    localStorage.removeItem('chat_token');
+                    this.$message({
+                        message: '退出请求异常，已清除登录状态',
+                        type: 'warning',
+                        duration: 2000
+                    });
+                    setTimeout(() => {
+                        redirectToLogin();
+                    }, 500);
+                } finally {
+                    this.isLoggingOut = false;
+                }
+            },
+
+            // ---------- 发送消息 ----------
+            handleSend() {
+                const text = this.inputText.trim();
+                if (!text || this.isProcessing) return;
+
+                if (!getToken()) {
+                    redirectToLogin();
+                    return;
+                }
+
+                if (this.streamTimer) {
+                    clearInterval(this.streamTimer);
+                    this.streamTimer = null;
+                }
+                this.charQueue = [];
+                this.activeMsgIndex = null;
+
+                this.messages.push({
+                    type: 'user',
+                    content: text
+                });
+                this.inputText = '';
+                this.isProcessing = true;
+
+                const aiIdx = this.messages.length;
+                this.messages.push({
+                    type: 'ai',
+                    thinking: true,
+                    reasoning: [],
+                    answer: '',
+                    _answerComplete: false,
+                    error: null
+                });
+
+                this.fetchSSE(text, aiIdx);
+            },
+
+            // ---------- SSE 请求 ----------
+            fetchSSE(question, msgIndex) {
+                const url = '/agent/chat';
+                const token = getToken();
+                if (!token) {
+                    this.handleError(msgIndex, '未登录，请重新登录');
+                    redirectToLogin();
+                    return;
+                }
+                console.log("sse start == ", this.threadId)
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/event-stream',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ question: question, threadId: this.threadId }),
+                };
+
+                fetch(url, options)
+                    .then(response => {
+                        if (response.status === 401) {
+                            localStorage.removeItem('chat_token');
+                            redirectToLogin();
+                            throw new Error('登录已过期，请重新登录');
+                        }
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder('utf-8');
+                        let buffer = '';
+                        const readStream = () => {
+                            reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    this.finishAI(msgIndex);
+                                    return;
+                                }
+                                buffer += decoder.decode(value, { stream: true });
+                                const lines = buffer.split('\n\n');
+                                buffer = lines.pop() || '';
+                                for (const event of lines) {
+                                    if (event.trim() === '') continue;
+                                    this.processSSEEvent(event, msgIndex);
+                                }
+                                readStream();
+                            }).catch(err => {
+                                this.handleError(msgIndex, '读取流数据失败: ' + err.message);
+                            });
+                        };
+                        readStream();
+                    })
+                    .catch(err => {
+                        if (err.message.includes('登录已过期')) {
+                            return;
+                        }
+                        this.handleError(msgIndex, '请求失败: ' + err.message);
+                    });
+            },
+
+            processSSEEvent(eventData, msgIndex) {
+                const lines = eventData.split('\n');
+                let eventType = null;
+                let dataLine = '';
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('event:')) {
+                        eventType = trimmed.substring(6).trim();
+                    } else if (trimmed.startsWith('data:')) {
+                        dataLine = trimmed.substring(5).trim();
+                    }
+                }
+                if (!dataLine) return;
+
+                let data = null;
+                try {
+                    data = JSON.parse(dataLine);
+                } catch (e) {
+                    const msg = this.messages[msgIndex];
+                    if (msg && msg.answer !== undefined) {
+                        this.enqueueContent(msgIndex, 'answer', dataLine, 0);
+                    }
+                    return;
+                }
+                console.log("data = ", data, eventType)
+
+                if (eventType === "init") {
+                    this.threadId = data.thread_id;
+                }else{
+                    this.updateAIFromEvent(data, msgIndex, eventType);
+                }
+            },
+
+            updateAIFromEvent(data, msgIndex, eventType) {
+                const msg = this.messages[msgIndex];
+                if (!msg) return;
+
+                const type = data.type;
+
+                if (type === 'reasoning' || type === 'answer') {
+                    if (data.content) {
+                        const blockIndex = type === 'reasoning' ? (data.index !== undefined ? data.index : 0) : null;
+                        this.enqueueContent(msgIndex, type, data.content, blockIndex);
+                        if (msg.thinking) msg.thinking = false;
+                        this.startStreamTimer();
+                    }
+                } else if (type === 'done' || type === 'end') {
+                    msg._answerComplete = true;
+                    this.isProcessing = false;
+                    this.$refs.inputArea.focus();
+                } else {
+                    if (data.content) {
+                        this.enqueueContent(msgIndex, 'answer', data.content, 0);
+                        this.startStreamTimer();
+                    }
+                }
+            },
+
+            enqueueContent(msgIndex, type, content, blockIndex) {
+                const tokens = this.tokenizeHTML(content);
+                for (let token of tokens) {
+                    this.charQueue.push({
+                        token: token,
+                        type: type,
+                        blockIndex: blockIndex,
+                        msgIndex: msgIndex
+                    });
+                }
+            },
+
+            tokenizeHTML(html) {
+                const tokens = [];
+                const regex = /(<[^>]+>)|(&[a-zA-Z]+;)|([^<&]+)/g;
+                let match;
+                while ((match = regex.exec(html)) !== null) {
+                    if (match[1]) {
+                        tokens.push(match[1]);
+                    } else if (match[2]) {
+                        tokens.push(match[2]);
+                    } else if (match[3]) {
+                        const chars = match[3].split('');
+                        for (let ch of chars) {
+                            tokens.push(ch);
+                        }
+                    }
+                }
+                return tokens;
+            },
+
+            startStreamTimer() {
+                if (this.streamTimer) return;
+                this.streamTimer = setInterval(() => {
+                    if (this.charQueue.length === 0) {
+                        if (!this.isProcessing) {
+                            clearInterval(this.streamTimer);
+                            this.streamTimer = null;
+                        }
+                        return;
+                    }
+
+                    const item = this.charQueue.shift();
+                    const msg = this.messages[item.msgIndex];
+                    if (!msg) return;
+
+                    if (item.type === 'answer') {
+                        msg.answer += item.token;
+                    }else if (item.type === 'reasoning') {
+                        const idx = item.blockIndex || 0;
+                        while (msg.reasoning.length <= idx) {
+                            msg.reasoning.push({ title: '', content: '' });
+                        }
+                        msg.reasoning[idx].content += item.token;
+                    }
+
+                    this.scrollToBottom();
+                }, 30);
+            },
+
+            handleError(msgIndex, errorMsg) {
+                const msg = this.messages[msgIndex];
+                if (msg) {
+                    msg.thinking = false;
+                    msg.error = errorMsg;
+                    msg._answerComplete = true;
+                }
+                this.isProcessing = false;
+                if (this.streamTimer) {
+                    clearInterval(this.streamTimer);
+                    this.streamTimer = null;
+                }
+                this.charQueue = [];
+                console.error('SSE Error:', errorMsg);
+                this.$refs.inputArea.focus();
+            },
+
+            finishAI(msgIndex) {
+                const msg = this.messages[msgIndex];
+                if (msg) {
+                    msg.thinking = false;
+                    msg._answerComplete = true;
+                }
+                this.isProcessing = false;
+                this.$refs.inputArea.focus();
+            },
+
+            scrollToBottom() {
+                const container = this.$refs.mainContainer;
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

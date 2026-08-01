@@ -1,0 +1,34 @@
+Name: main.rpc
+ListenOn: 0.0.0.0:8081
+#Mode: dev
+#Etcd:
+#  Hosts:
+#    - 127.0.0.1:2379
+#  Key: main.rpc
+
+
+
+
+Mysql:
+  DataSource: root:root@tcp(127.0.0.1:3306)/ai?charset=utf8mb4&loc=Local
+  # GORM 特有配置
+  MaxIdleConns: 10
+  MaxOpenConns: 100
+  LogLevel: 4 # 1:Silent, 2:Error, 3:Warn, 4:Info
+
+Log:
+  Mode: "console" # console, file, volume
+  Path: "logs"
+  Level: "debug" # debug, info, error, severe
+  Compress: false
+  KeepDays: 7
+  Encoding: "plain" # json 或 plain（默认是 plain）
+  MaxSize: 1                  # 单个文件最大 100MB，超过自动切割
+  MaxBackups: 10                # 保留最近 10 个备份文件
+  MaxAge: 30                    # 保留 30 天内的日志（按修改时间）
+
+AuthConfig:
+  AccessSecret: "{B)N;+)kTKDxHq@NERDUqS?A34OgzU-k"
+  AccessExpire: 31536000
+  RefreshSecret: "UVzF%8qe]b5*+lQ;N<PYU}T-K<,IL8T-"  # 独立的 Refresh Token 密钥
+  RefreshExpire: 604800     # Refresh Token 有效期：7天（秒）

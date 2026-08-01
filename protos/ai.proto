@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package ai;
+
+option go_package = "./pb";
+
+message ChatRequest {
+  string question = 1;
+  string threadId = 3;
+}
+
+message ChatResponse {
+  string data = 1;
+}
+
+
+service ai {
+  rpc Chat(ChatRequest) returns (stream ChatResponse);
+}

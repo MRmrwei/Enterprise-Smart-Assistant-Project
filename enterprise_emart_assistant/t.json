@@ -1,0 +1,55 @@
+{
+    "description": {
+        "name": {
+            "type": "string",
+            "desc": "申请人名称"
+        },
+        "day_total": {
+            "type": "int",
+            "desc": "请假天数"
+        },
+        "type": {
+            "type": "string",
+            "desc": "请假类型",
+            "enum": ["shengbing", "nianjia"]
+        },
+        "reason":{
+            "type": "string",
+            "desc": "申请原因"
+        },
+        "start_date": {
+            "type": "string",
+            "desc": "休假开始日期"
+        },
+        "end_date": {
+            "type":"string",
+            "desc": "休假结束日期"
+        }
+    },
+    "data": [
+        {
+            "name": "小米",
+            "day_total": 1,
+            "type": "shengbing",
+            "reason": "感冒发烧",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-12"
+        },
+        {
+            "name": "吴亦凡",
+            "day_total": 3,
+            "type": "nianjia",
+            "reason": "出去旅游",
+            "start_date": "2026-06-24",
+            "end_date": "2026-06-27"
+        },
+        {
+            "name": "小米",
+            "day_total": 2,
+            "type": "shengbing",
+            "reason": "感冒发烧",
+            "start_date": "2026-06-15",
+            "end_date": "2026-06-16"
+        }
+    ]
+}
