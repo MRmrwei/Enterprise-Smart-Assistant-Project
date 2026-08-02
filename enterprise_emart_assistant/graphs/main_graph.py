@@ -12,7 +12,7 @@ from tools.base import tools_container
 from pydantics.intentions import Intention
 from tools.forms import form_all_tools
 from tools.qa import qa_query
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 
 def _init_node(state: AgentState):
@@ -58,11 +58,11 @@ async def _verification_node(state: AgentState):
 async def _completed_node(state: AgentState):
 
     writer = get_stream_writer()
-
-    writer({"type": "answer", "content": state.get("answer", "")})
+    answer = state.get("answer", "")
+    writer({"type": "answer", "content": answer})
 
     """完成节点，最终输出答案"""
-    return state
+    return {"messages":[AIMessage(content=answer)]}
 
 
 def build_graph():

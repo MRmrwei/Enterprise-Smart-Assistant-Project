@@ -14,13 +14,14 @@ class AgentService:
     ):
         thread_id = config.get("configurable", {}).get("thread_id")
         interrupt = cache.get(f"{thread_id}:interrupts", None)
+        reason_num = 0
         if interrupt is not None:
             print("进入    interrupts")
             cache.delete(f"{thread_id}:interrupts")
             """
             交互流程
             """
-            round_num = 0
+            
             async for namespace, model, data in main_graph.astream(
                 Command(resume=question),
                 config=config,
@@ -34,11 +35,11 @@ class AgentService:
 
                     async for char in self.intelligentStreamer(content, type):
                         if type == "reasoning":
-                            char["index"] = round_num
+                            char["index"] = reason_num
                         yield SSEContent(char)
 
                     if type == "reasoning":
-                        round_num += 1
+                        reason_num += 1
 
             current_state = await main_graph.aget_state(config)
             if current_state.interrupts:
@@ -48,7 +49,6 @@ class AgentService:
                     yield SSEContent(char)
 
         else:
-            round_num = 0
             async for namespace, model, data in main_graph.astream(
                 state, config, stream_mode=["custom", "updates"], subgraphs=True
             ):
@@ -59,11 +59,11 @@ class AgentService:
 
                     async for char in self.intelligentStreamer(content, type):
                         if type == "reasoning":
-                            char["index"] = round_num
+                            char["index"] = reason_num
                         yield SSEContent(char)
 
                     if type == "reasoning":
-                        round_num += 1
+                        reason_num += 1
 
             current_state = await main_graph.aget_state(config)
             if current_state.interrupts:
