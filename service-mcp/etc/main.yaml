@@ -7,7 +7,11 @@ ListenOn: 0.0.0.0:8081
 #  Key: main.rpc
 
 
-
+McpConfig:
+  Name: "agent-mcp"
+  McpName: "agent-mcp"
+  Version: "1.0"
+  Port: 8083
 
 Mysql:
   DataSource: root:root@tcp(127.0.0.1:3306)/ai?charset=utf8mb4&loc=Local

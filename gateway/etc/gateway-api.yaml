@@ -18,6 +18,13 @@ Upstreams:
       - Method: post                  # HTTP 方法
         Path: /login                  # 你希望对外暴露的路径
         RpcPath: main.rpc/Login       # 对应 proto 里的 package.service/method
+  - Http:
+      Target: localhost:8083
+      Timeout: 3000    # 单位为毫秒，默认值 3000
+    Mappings:
+      - Method: POST
+        Path: /mcp
+
 
 Log:
   Mode: "console" # console, file, volume

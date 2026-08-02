@@ -20,18 +20,21 @@ class AgentRpc(ai_pb2_grpc.aiServicer):
     async def Chat(
         self, request: ai_pb2.ChatRequest, context: grpc.aio.ServicerContext
     ):
-
-        thread_id = (
-            request.threadId
-            or f"{generate_strong_id()}_{get_metadata_value(context, 'uid')}"
-        )
+        authorization = get_metadata_value(context, "Authorization")
+        uid = get_metadata_value(context, "uid")
+        # return
+        thread_id = request.threadId or f"{generate_strong_id()}_{uid}"
 
         if request.threadId == "" or request.threadId is None:
             yield ai_pb2.ChatResponse(data=SSEContent({"thread_id": thread_id}, "init"))
 
-       
-
-        config = {"configurable": {"thread_id": thread_id}}
+        config = {
+            "configurable": {
+                "thread_id": thread_id,
+                "uid": uid,
+                "authorization": authorization,
+            }
+        }
         state = {
             "messages": [{"role": "user", "content": request.question}],
             "state": "employee",

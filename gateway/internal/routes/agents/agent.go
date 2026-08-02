@@ -36,9 +36,9 @@ func Chat(agentRpc app.AgentRpc) http.HandlerFunc {
 
 		md := metadata.Pairs(
 			"uid", ctx.Value("uid").(json.Number).String(),
+			"Authorization", r.Header.Get("Authorization"),
 		)
 		//// 或者使用 map 方式: metadata.New(map[string]string{"authorization": authHeader, ...})
-		//
 		//// 4. 将 metadata 注入到 context 中
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		stream, err := agentRpc.Client().Chat(ctx, &pb.ChatRequest{

@@ -2,6 +2,8 @@ package main
 
 import (
 	"ai/service-mcp/internal/config"
+	"ai/service-mcp/internal/mcp"
+	"ai/service-mcp/internal/routes"
 	"ai/service-mcp/internal/server"
 	"ai/service-mcp/internal/svc"
 	"ai/service-mcp/pb"
@@ -23,7 +25,7 @@ func main() {
 
 	conf.MustLoad(*configFile, &c)
 	ctx := svc.NewServiceContext(c)
-
+	master := service.NewServiceGroup()
 	s := zrpc.MustNewServer(c.RpcServerConf, func(grpcServer *grpc.Server) {
 		pb.RegisterRpcServer(grpcServer, server.NewRpcServer(ctx))
 
@@ -31,9 +33,14 @@ func main() {
 			reflection.Register(grpcServer)
 		}
 	})
-	defer s.Stop()
+
+	mcpserver := mcp.NewMCPServer(c.McpConfig)
+	routes.ToolRegister(mcpserver.McpServer, ctx)
+	master.Add(mcpserver)
+	master.Add(s)
+	defer master.Stop()
 
 	fmt.Printf("Starting rpc server at %s...\n", c.ListenOn)
 
-	s.Start()
+	master.Start()
 }
