@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"gateway/internal/config"
+	"gateway/internal/middlewares"
 	"gateway/internal/routes"
 	"gateway/internal/svc"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -20,7 +21,9 @@ func main() {
 	flag.Parse()
 	var c config.Config // 或使用你自定义的 config.Config
 	conf.MustLoad(*configFile, &c)
+
 	gw := gateway.MustNewServer(c.GatewayConf)
+	gw.Use(middlewares.AuthWithWhitelist(c.AuthConfig.AccessSecret))
 	app := svc.NewServiceContext(c)
 	routes.Register(gw, app)
 	master := service.NewServiceGroup()

@@ -7,6 +7,6 @@ type UserModel struct {
 	Nickname string
 }
 
-func (this *UserModel) TableName() string {
+func (u *UserModel) TableName() string {
 	return "ai_user"
 }
