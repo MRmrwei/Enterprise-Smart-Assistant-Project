@@ -9,7 +9,7 @@
 
 | 组件 | 技术栈 | 职责 |
 | :--- | :--- | :--- |
-| **[Agent](./enterprise_emart_assistant/README.md)** | LangGraph + gRPC | AI 编排层：意图识别、对话管理、工具调用 |
+| **[Agent](./enterprise_emart_assistant/README.md)** | LangGraph + Fast API SSE | AI 编排层：意图识别、对话管理、工具调用 |
 | **[Gateway](./gateway/README.md)** | go-zero + gRPC + HTTP SSE| 流量入口：HTTP 网关、JWT 鉴权、请求路由 |
 | **[Service-MCP](./service-mcp/README.md)** | go-zero + gRPC + HTTP | 业务服务层：认证 RPC、MCP 数据服务 |
 
@@ -96,9 +96,9 @@ graph TB
         G[(Redis)]
     end
 
-    A -->|HTTP| B
+    A -->|HTTP/SSE| B
     B -->|gRPC| C
-    B -->|gRPC| D
+    B -->|HTTP SSE| D
     C -->|SQL| E
     C -->|Redis| G
     D -->|HTTP/SSE| C
