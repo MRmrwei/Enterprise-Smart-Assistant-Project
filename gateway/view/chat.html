@@ -429,7 +429,7 @@
 
     // ---------- 工具函数：跳转到登录页 ----------
     function redirectToLogin() {
-        window.location.href = 'http://127.0.0.1:8888/view/login.html';
+        window.location.href = '/view/login.html';
     }
 
     new Vue({
@@ -574,7 +574,7 @@
 
             // ---------- SSE 请求 ----------
             fetchSSE(question, msgIndex) {
-                const url = '/agent/chat';
+                const url = '/chat';
                 const token = getToken();
                 if (!token) {
                     this.handleError(msgIndex, '未登录，请重新登录');
@@ -589,7 +589,7 @@
                         'Accept': 'text/event-stream',
                         'Authorization': 'Bearer ' + token
                     },
-                    body: JSON.stringify({ question: question, threadId: this.threadId }),
+                    body: JSON.stringify({ question: question, thread_id: this.threadId }),
                 };
 
                 fetch(url, options)

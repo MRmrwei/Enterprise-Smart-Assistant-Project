@@ -10,9 +10,10 @@ from pydantics.intentions import Intention
 
 class AgentState(MessagesState):
     role: str | None = ""
-    user_id: str | None = None
+    uid: int | None = None
     answer: str | None = ""
     intentions: Intention | None = None
     sub_messages: Annotated[list[AnyMessage], add_messages]
     agent_attributes: dict | None = {}
+    question: str | None = ""
     pass

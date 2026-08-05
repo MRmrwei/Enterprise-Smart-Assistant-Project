@@ -9,6 +9,7 @@ dependencies = [
     "cacheout>=0.16.0",
     "chromadb>=1.5.9",
     "docx2txt>=0.9",
+    "fastapi[standard]>=0.141.1",
     "grpcio>=1.83.0",
     "grpcio-tools>=1.83.0",
     "langchain>=1.3.14",
@@ -22,6 +23,7 @@ dependencies = [
     "langchain-skills-adapters>=0.1.6",
     "langgraph>=1.2.9",
     "load-dotenv>=0.1.0",
+    "mcp<2.0.0",
     "redis[hiredis]>=8.1.0",
 ]
 

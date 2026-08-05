@@ -1,7 +1,7 @@
 Name: gateway-api
 Host: 0.0.0.0
 Port: 8888
-
+Timeout: 60000
 AuthConfig:
   AccessSecret: "{B)N;+)kTKDxHq@NERDUqS?A34OgzU-k"
   AccessExpire: 31536000
@@ -19,12 +19,24 @@ Upstreams:
         Path: /login                  # 你希望对外暴露的路径
         RpcPath: main.rpc/Login       # 对应 proto 里的 package.service/method
   - Http:
+      Name: "service-mcp"
       Target: localhost:8083
       Timeout: 3000    # 单位为毫秒，默认值 3000
     Mappings:
       - Method: POST
         Path: /mcp
+#  - Http:
+#      Name: "agent"
+#      Target: localhost:8084
+#      Timeout: 60000
+#    Mappings:
+#      - Method: POST
+#        Path: /chat
 
+AgentAddr:
+  - Host: http://127.0.0.1:8084
+    Name: "agent"
+    Path: /chat
 
 Log:
   Mode: "console" # console, file, volume

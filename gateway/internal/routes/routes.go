@@ -9,12 +9,14 @@ import (
 )
 
 func Register(server *gateway.Server, app app.Application) {
-	server.AddRoute(rest.Route{
-		Method:  http.MethodPost,
-		Path:    "/agent/chat",
-		Handler: agents.Chat(app),
-	}, rest.WithSSE(), rest.WithTimeout(0), rest.WithJwt(app.Config().AuthConfig.AccessSecret))
 
+	for _, agentAddr := range app.Config().AgentAddr {
+		server.AddRoute(rest.Route{
+			Method:  http.MethodPost,
+			Path:    agentAddr.Path,
+			Handler: agents.Chat(agentAddr).ServeHTTP,
+		}, rest.WithSSE(), rest.WithTimeout(0))
+	}
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/view/:file",
