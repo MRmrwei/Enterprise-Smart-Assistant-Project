@@ -1,35 +1,67 @@
 package agents
 
 import (
+	"io"
+	"net/http"
+
 	"gateway/internal/config"
 	"github.com/zeromicro/go-zero/core/logx"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
+	"github.com/zeromicro/go-zero/rest/httpc"
 )
 
-type ChatReq struct {
-	Question string `json:"question"`
-	ThreadId string `json:"threadId,omitempty"`
-}
+// Chat 返回一个 HTTP Handler，用于将请求转发到后端 SSE 服务
+func Chat(agentAddr config.AgentAddr) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// 1. 构造后端完整 URL
+		targetURL := agentAddr.Host + agentAddr.Path
 
-func (Chat *ChatReq) Validate() error {
-	logx.Debug("Validate func")
-	return nil
-}
-func Chat(agentAddr config.AgentAddr) *httputil.ReverseProxy {
-	target, _ := url.Parse(agentAddr.Host) // 你的后端服务地址
+		// 2. 创建转发请求（复用原始请求的 Context、Method、Body 和 Header）
+		req, err := http.NewRequestWithContext(r.Context(), r.Method, targetURL, r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		req.Header = r.Header.Clone() // 克隆原始 Header（含认证等）
 
-	// 2. 创建反向代理，并自定义 Director
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		// 关键：修改请求的路径，指向后端实际的 SSE 端点
-		req.URL.Path = agentAddr.Path // 你的后端 SSE 实际路径
-		// 如果需要，可以在这里修改 Header，例如 Host
-		// req.Host = "your-backend-host"
+		// 3. 使用 httpc 发起请求（自动注入 traceparent 等头）
+		resp, err := httpc.DoRequest(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		// 4. 复制后端响应的 Header 到客户端响应
+		for key, values := range resp.Header {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+		w.WriteHeader(resp.StatusCode)
+
+		// 5. 获取 Flusher（用于强制刷新）
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		// 6. 流式复制响应体，每次写入后立即 Flush
+		buf := make([]byte, 32*1024) // 32KB 缓冲区
+		for {
+			n, err := resp.Body.Read(buf)
+			if n > 0 {
+				if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+					return // 客户端已断开，停止复制
+				}
+				flusher.Flush() // 强制将数据发送给客户端
+			}
+			if err != nil {
+				if err != io.EOF {
+					logx.Errorf("Stream copy error: %v", err)
+				}
+				return
+			}
+		}
 	}
-
-	return proxy
 }

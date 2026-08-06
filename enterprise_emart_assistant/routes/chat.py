@@ -27,6 +27,10 @@ async def chat(
     chatRequest: ChatRequest, request: Request
 ) -> AsyncIterable[ServerSentEvent]:
 
+    [print(f"header = {h}") for h in request.headers.items()]
+    
+    print(f"uid = 11111")
+    
     uid = context.get().uid
     thread_id = chatRequest.thread_id or AgentService.get_thread_id(uid)
 
@@ -48,6 +52,7 @@ async def chat(
         "uid": uid,
         "answer": "",
     }
+
 
     async for result in AgentService().Chat(state, config):
         yield ServerSentEvent(data=result.data, event=result.event)
