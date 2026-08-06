@@ -137,7 +137,8 @@ class BaseExecutorAgent:
         """
 
     def get_tools(self) -> list[BaseTool]:
-        return self.tools
+        tools = self.tools + tools_container.get_tools("employee_info")
+        return tools
 
     def set_tools(self, tools: list[BaseTool]):
         self.tools = tools
