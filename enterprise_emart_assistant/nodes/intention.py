@@ -22,16 +22,13 @@ async def intention_node(state: AgentState):
     """
     意图识别根据意图选择skill节点
     """
-    question = state.get("question")
-    message = HumanMessage(question)
+    question = state.get("messages", [])[-1]
     response = await intention_llm().ainvoke(
-        [SystemMessage(get_intention_system_prompt()), message]
+        [SystemMessage(get_intention_system_prompt()), question]
     )
 
-    aimessage = response["raw"]
     intentions: Intention = response["parsed"]
 
-    intentions.origin_input = question
     print(f"意图: {intentions}")
     # state.update(
     #     {
@@ -39,7 +36,6 @@ async def intention_node(state: AgentState):
     #     }
     # )
 
-    state["messages"] = [message, aimessage]
     state["intentions"] = intentions
 
     return state

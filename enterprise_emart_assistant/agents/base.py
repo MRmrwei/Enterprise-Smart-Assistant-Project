@@ -36,10 +36,19 @@ class BaseAgent(ABC):
     def get_state_graph(self) -> StateGraph:
         return StateGraph(self.get_state())
 
+    @classmethod
     @abstractmethod
-    def get_key(self) -> str:
+    def get_key(cls) -> str:
         """
         智能体标识
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_description(cls) -> str:
+        """
+        智能体使用场景描述
         """
         pass
 
@@ -101,3 +110,6 @@ class BaseAgent(ABC):
 
         self.set_sub_messages(state, self.get_history_messages(state))
         return state
+
+    def get_sub_messages_key(self) -> str:
+        return self.get_state().get_message_key()

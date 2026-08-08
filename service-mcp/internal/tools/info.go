@@ -5,6 +5,7 @@ import (
 	"ai/service-mcp/internal/svc/app"
 	"ai/service-mcp/internal/tools/types"
 	"context"
+	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/zeromicro/go-zero/core/logc"
@@ -34,7 +35,9 @@ func EmployeeInfoTool(app app.Application) server.ServerTool {
 				logx.Debug("err =", err.Error())
 			}
 			logx.Debug("res", res)
-			return mcp.NewToolResultStructured(res, "我是你爸爸"), err
+
+			content := fmt.Sprintf("员工信息如下：\n员工ID：%d\n员工名称：%s\n员工角色编码：%s\n员工角色名称：%s", res.Uid, res.Name, res.RoleCodes, res.RoleNames)
+			return mcp.NewToolResultStructured(res, content), err
 		},
 	}
 }
