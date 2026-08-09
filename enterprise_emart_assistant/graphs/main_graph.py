@@ -1,24 +1,19 @@
+from langchain.agents import create_agent
 from langgraph.graph import END, StateGraph
-from langgraph.config import get_stream_writer
-from agents.base import BaseAgent
-from agents.employee.agent import EmployeeDataAgent
 from graphs.state import AgentState
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from llms.factory import get_default_llm
 from nodes.combine import combine_node
 from nodes.router import route_node
 from nodes.intention import intention_node
-from nodes.auth import auth_permission_node
 from langgraph.checkpoint.memory import InMemorySaver
-from tools.base import tools_container
 from pydantics.intentions import Intention
-from tools.forms import form_all_tools
-from tools.qa import qa_query
 from langchain_core.messages import HumanMessage, AIMessage
 from agents.list import agents
 
 
 def init_node(state: AgentState):
+    
     return {
         "agent_messages": {},
         "agent_answer": {},
@@ -35,7 +30,6 @@ def register_nodes(builder: StateGraph):
     builder.add_node("intention_node", intention_node)
     builder.add_node("combine", combine_node)
     builder.add_node("route_node", route_node)
-    # builder.add_node("executor_agent", executor_agent.graph)
     builder.add_node("completed", completed_node)
     # builder.add_node("verification", _verification_node)
 
@@ -44,7 +38,7 @@ def register_nodes(builder: StateGraph):
         builder.add_edge(agent.get_key(), "combine")
 
 
-async def completed_node(state: AgentState):
+def completed_node(state: AgentState):
     """完成节点，最终输出答案"""
     answer = state.get("answer", "")
     return {"messages": [AIMessage(content=answer)]}
@@ -57,8 +51,6 @@ def build_graph():
     builder.set_entry_point("init_node")
     builder.add_edge("init_node", "intention_node")
     builder.add_edge("intention_node", "route_node")
-    # for node in ["chat_node", "executor_agent"]:
-    #     builder.add_edge(node, "verification")
 
     # builder.add_edge("verification", "completed")
     builder.add_edge("combine", "completed")

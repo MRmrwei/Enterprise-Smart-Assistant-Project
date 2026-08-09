@@ -53,7 +53,6 @@ async def combine_node(state: AgentState):
     )
 
     llm = get_default_llm()
-    # 注意：原代码混用了 ainvoke / ainvoke，这里统一使用异步调用
     ai_msg = await llm.ainvoke([SystemMessage(content=prompt)])
 
     return {"answer": ai_msg.content}

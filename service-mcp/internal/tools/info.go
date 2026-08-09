@@ -16,7 +16,6 @@ import (
 func EmployeeInfoTool(app app.Application) server.ServerTool {
 	tool := mcp.NewTool("employee_info",
 		mcp.WithDescription("获取员工个人信息请调用此工具"),
-		//mcp.WithString("name", mcp.Required(), mcp.Description("员工姓名")),
 		mcp.WithOutputSchema[types.EmployeeInfoResponse](),
 	)
 	return server.ServerTool{
@@ -32,7 +31,7 @@ func EmployeeInfoTool(app app.Application) server.ServerTool {
 			service := services.NewEmployeeService(app.DB())
 			res, err := service.Info(ctx, uid)
 			if err != nil {
-				logx.Debug("err =", err.Error())
+				logc.Debug(ctx, "err =", err.Error())
 			}
 			logx.Debug("res", res)
 

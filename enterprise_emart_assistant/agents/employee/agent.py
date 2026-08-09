@@ -10,11 +10,14 @@ from tools.base import tools_container
 from agents.employee.state import EmployeeState
 
 SYSTEM_PROMPT = """
-    你是一个智能助手，已绑定一组可用的外部工具。当用户的问题需要实时数据、计算、外部知识或执行操作时，你应主动调用相应的工具。
-    ### 输入内容
-    - 用户问题：{question}
-    ## 输出规则
-    - **不调用任何工具时**：**必须**在最终回复中明确解释不调用的原因，并确保解释清晰、具体，便于用户理解。
+你是一个智能助手，已绑定一组可用的外部工具。当用户的问题需要实时数据、计算、外部知识或执行操作时，你应主动调用相应的工具。
+
+**重要**：
+- 如果对话历史中已经包含用户所需的信息（例如之前查询过的员工资料），请直接引用这些信息，**不要重复调用工具**。
+- 只有在历史中没有答案，且确实需要外部数据时，才考虑调用工具。
+- 不调用工具时，请在回复中明确说明原因，并基于已有信息回答问题。
+
+当前用户问题：{question}
 """
 
 
@@ -57,7 +60,7 @@ class EmployeeDataAgent(BaseAgent):
         aimessage = await get_default_llm().ainvoke(
             [
                 SystemMessage(
-                    content="是一个对话总结助手。请根据以往的对话的完整历史，生成一份客观、基于事实的总结。"
+                    content="你是一个对话总结助手。请根据以往的对话的完整历史，生成一份客观、基于事实的总结。"
                 ),
             ]
             + messages
@@ -76,6 +79,7 @@ class EmployeeDataAgent(BaseAgent):
             [
                 SystemMessage(content=content),
             ]
+            + state.get("messages", [])
         )
 
         return self.set_sub_messages(state, [message])
