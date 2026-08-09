@@ -26,12 +26,11 @@ class BaseAgent(ABC):
     def edge_nodes(self, builder: StateGraph):
         pass
 
-    @abstractmethod
     def get_state(self) -> AgentState:
         """
         图状态
         """
-        pass
+        return AgentState
 
     def get_state_graph(self) -> StateGraph:
         return StateGraph(self.get_state())

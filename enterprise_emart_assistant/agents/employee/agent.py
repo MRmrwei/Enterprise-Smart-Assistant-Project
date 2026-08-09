@@ -1,5 +1,5 @@
 from langchain.messages import HumanMessage, SystemMessage
-from langgraph.graph import END, StateGraph
+from langgraph.graph import StateGraph
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import ToolNode
 from regex import E
@@ -52,7 +52,7 @@ class EmployeeDataAgent(BaseAgent):
         builder.add_edge("init_node", "load_tool")
         builder.add_conditional_edges("load_tool", self.router)
         builder.add_edge("tool", "completed")
-        builder.add_edge("completed", END)
+        builder.set_finish_point("completed")
 
     async def completed_node(self, state: EmployeeState):
         # 多轮对话

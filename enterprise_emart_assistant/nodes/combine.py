@@ -36,8 +36,10 @@ async def combine_node(state: AgentState):
     answer = state.get("answer")
 
     # 如果子答案为空但已有完整答案，直接返回
-    if not agent_answers and answer != "":
-        return state
+    if not agent_answers:
+        if answer != "":
+            return state
+        return {}
 
     # 给碎片编号，帮助LLM识别"这是第几个碎片"，但Prompt里已强调不要按顺序拼接
     # 为了更清晰，可以保留编号，让LLM知道一共有几块
@@ -47,6 +49,8 @@ async def combine_node(state: AgentState):
             for i, (key, value) in enumerate(agent_answers.items())
         ]
     )
+
+    print(f"碎片答案：\n{formatted_answers}")
     # 格式化System Prompt
     prompt = SYSTEM_PROMPT.format(
         question=state.get("question", ""), answers=formatted_answers
@@ -54,5 +58,4 @@ async def combine_node(state: AgentState):
 
     llm = get_default_llm()
     ai_msg = await llm.ainvoke([SystemMessage(content=prompt)])
-
     return {"answer": ai_msg.content}
