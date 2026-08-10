@@ -1,5 +1,6 @@
 <template>
   <div class="chat-page">
+    <!-- ── 标题栏 ── -->
     <div class="chat-titlebar">
       <div class="titlebar-left">
         <span class="title-icon">✦</span>
@@ -11,44 +12,71 @@
       </div>
     </div>
 
+    <!-- ── 消息列表 ── -->
     <main class="app-main" ref="mainContainer">
       <div class="messages">
+        <!-- 空状态 -->
         <div v-if="messages.length === 0" class="empty-state">
           <div class="empty-icon">💬</div>
           <div class="empty-text">开始你的第一次对话</div>
           <div class="empty-sub">输入问题，AI 将流式展示推理过程</div>
         </div>
 
-        <div v-for="(msg, idx) in messages" :key="idx" class="message" :class="msg.type">
+        <!-- 消息气泡 -->
+        <div
+          v-for="(msg, idx) in messages"
+          :key="idx"
+          class="message"
+          :class="msg.type"
+        >
           <div class="avatar">{{ msg.type === 'ai' ? 'AI' : '我' }}</div>
           <div class="bubble">
+            <!-- 用户消息 -->
             <template v-if="msg.type === 'user'">
               <div class="text">{{ msg.content }}</div>
             </template>
+
+            <!-- AI 消息 -->
             <template v-if="msg.type === 'ai'">
+              <!-- 思考中动画 -->
               <div v-if="msg.thinking" class="thinking-placeholder">
                 <span>正在思考</span>
                 <span class="dots"><span></span><span></span><span></span></span>
               </div>
+
               <div class="ai-reply">
-                <div v-if="msg.reasoning && msg.reasoning.length > 0">
+                <!-- 推理过程（仅当有推理内容时显示） -->
+                <template v-if="msg.reasoning?.length">
                   <div class="reasoning-section">
-                    <span class="label"><span>🧠 推理过程</span></span>
+                    <span class="label">🧠 推理过程</span>
                     <span class="divider"></span>
                   </div>
                   <div class="reasoning-blocks">
-                    <div v-for="(block, bi) in msg.reasoning" :key="bi" class="reasoning-block">
+                    <div
+                      v-for="(block, bi) in msg.reasoning"
+                      :key="bi"
+                      class="reasoning-block"
+                    >
                       <div class="block-content" v-html="block.content"></div>
                     </div>
                   </div>
-                </div>
-                <div v-if="msg.answer || msg._answerComplete === false" class="answer-section">
+                </template>
+
+                <!-- 最终答案：无推理时不显示顶部分隔线 -->
+                <div
+                  v-if="msg.answer || msg._answerComplete === false"
+                  class="answer-section"
+                  :class="{ 'no-divider': !msg.reasoning?.length }"
+                >
                   <div class="answer-label">最终答案</div>
+                  <!-- 答案尚未返回时显示加载动画 -->
                   <div v-if="!msg.answer" class="thinking-placeholder">
                     <span class="dots"><span></span><span></span><span></span></span>
                   </div>
                   <div class="answer-text" v-html="msg.answer"></div>
                 </div>
+
+                <!-- 错误信息 -->
                 <div v-if="msg.error" class="error-message">⚠️ {{ msg.error }}</div>
               </div>
             </template>
@@ -57,15 +85,25 @@
       </div>
     </main>
 
+    <!-- ── 底部输入区 ── -->
     <footer class="app-footer">
       <div class="input-wrapper">
         <el-input
-          type="textarea" v-model="inputText" :rows="1"
+          type="textarea"
+          v-model="inputText"
+          :rows="1"
           placeholder="输入你的问题，按 Enter 发送…"
           @keydown.enter.prevent="handleSend"
-          :disabled="isProcessing" ref="inputArea" autofocus
+          :disabled="isProcessing"
+          ref="inputArea"
+          autofocus
         />
-        <el-button class="send-btn" :disabled="!inputText.trim() || isProcessing" @click="handleSend" type="primary">
+        <el-button
+          class="send-btn"
+          :disabled="!inputText.trim() || isProcessing"
+          @click="handleSend"
+          type="primary"
+        >
           <el-icon><Promotion /></el-icon> 发送
         </el-button>
       </div>
@@ -78,7 +116,14 @@ import { onMounted, nextTick } from 'vue'
 import { Promotion } from '@element-plus/icons-vue'
 import { useChat } from '../composables/useChat'
 
-const { messages, inputText, isProcessing, mainContainer, inputArea, handleSend } = useChat()
+const {
+  messages,
+  inputText,
+  isProcessing,
+  mainContainer,
+  inputArea,
+  handleSend,
+} = useChat()
 
 onMounted(() => {
   nextTick(() => inputArea.value?.focus())
