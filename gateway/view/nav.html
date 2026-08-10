@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>导航 · 企业智能助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/theme-chalk/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/index.js"></script>
+    <link rel="stylesheet" href="resources/css/common.css" />
+    <link rel="stylesheet" href="resources/css/nav.css" />
+</head>
+<body>
+<div id="app">
+    <!-- 顶部导航 -->
+    <div class="topbar">
+        <div class="brand">
+            <div class="logo-icon">
+                <i class="el-icon-cpu"></i>
+            </div>
+            <h1>企业智能助手</h1>
+        </div>
+        <div class="user-area">
+            <span class="user-name">
+                <i class="el-icon-user-solid" style="margin-right:4px;color:#409EFF"></i>
+                已登录
+            </span>
+            <el-button class="logout-btn" size="small" @click="handleLogout" :loading="loggingOut">
+                <i class="el-icon-switch-button"></i> {{ loggingOut ? '退出中...' : '退出登录' }}
+            </el-button>
+        </div>
+    </div>
+
+    <!-- 功能入口 -->
+    <div class="main-content">
+        <div class="card-grid">
+            <!-- 对话助手 -->
+            <a class="nav-card chat" href="chat.html">
+                <div class="card-icon">
+                    <i class="el-icon-chat-dot-round"></i>
+                </div>
+                <h2>AI 对话助手</h2>
+                <p>智能问答、文档分析、代码辅助等对话式 AI 服务</p>
+                <div class="card-arrow">
+                    <i class="el-icon-arrow-right"></i>
+                </div>
+            </a>
+
+            <!-- 文档导入 -->
+            <a class="nav-card rag" href="rag.html">
+                <div class="card-icon">
+                    <i class="el-icon-upload2"></i>
+                </div>
+                <h2>RAG 文档导入</h2>
+                <p>将 TXT 文档向量化导入知识库，增强 AI 检索能力</p>
+                <div class="card-arrow">
+                    <i class="el-icon-arrow-right"></i>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="page-footer">
+        &copy; 2026 企业智能助手 · Enterprise Smart Assistant
+    </div>
+</div>
+
+<script>
+    // ---------- 工具函数 ----------
+    function getToken() {
+        return localStorage.getItem('chat_token');
+    }
+    function redirectToLogin() {
+        window.location.href = '/view/login.html';
+    }
+
+    new Vue({
+        el: '#app',
+        data: {
+            loggingOut: false,
+        },
+        mounted() {
+            // 检查登录状态
+            const token = getToken();
+            if (!token) {
+                redirectToLogin();
+                return;
+            }
+        },
+        methods: {
+            handleLogout() {
+                var self = this;
+                this.loggingOut = true;
+
+                // 调后端登出（可选），无论成败都清除本地 token
+                var token = getToken();
+                fetch('http://127.0.0.1:8888/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token,
+                    },
+                })
+                    .catch(function () { /* 忽略网络错误 */ })
+                    .finally(function () {
+                        localStorage.removeItem('chat_token');
+                        self.loggingOut = false;
+                        redirectToLogin();
+                    });
+            },
+        },
+    });
+</script>
+</body>
+</html>

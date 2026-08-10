@@ -1,6 +1,23 @@
+# ===== Python =====
 *.env
 .pytest_cache
 .venv
 uv.lock
 __pycache__
+
+# ===== IDE =====
 .idea
+.vscode
+*.swp
+*.swo
+
+# ===== Node / Vite =====
+node_modules/
+dist/
+*.local
+*.log
+npm-debug.log*
+
+# ===== OS =====
+Thumbs.db
+.DS_Store

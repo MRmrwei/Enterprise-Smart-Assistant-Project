@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG 文档导入 · 向量数据库</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/theme-chalk/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/index.js"></script>
+    <link rel="stylesheet" href="resources/css/common.css" />
+    <link rel="stylesheet" href="resources/css/rag.css" />
+</head>
+<body>
+<div id="app">
+    <div class="top-links">
+        <a href="nav.html" class="back-link">
+            <i class="el-icon-s-home"></i> 返回导航
+        </a>
+        <a href="chat.html" class="back-link">
+            <i class="el-icon-chat-dot-round"></i> 对话助手
+        </a>
+    </div>
+
+    <div class="page-card">
+        <!-- 头部 -->
+        <div class="page-header">
+            <div class="icon-wrap">
+                <i class="el-icon-upload2"></i>
+            </div>
+            <div>
+                <h1>文档导入 · 向量数据库</h1>
+                <div class="subtitle">将 TXT 文档向量化存入 RAG 知识库</div>
+            </div>
+        </div>
+
+        <!-- 表单 -->
+        <el-form
+            ref="formRef"
+            :model="form"
+            :rules="rules"
+            label-width="100px"
+            label-position="right"
+            size="medium"
+        >
+            <!-- ============================================================ -->
+            <!-- 文档类型下拉框：在 docTypes 数组中填你自己的类型            -->
+            <!-- ============================================================ -->
+            <el-form-item label="文档类型" prop="docType">
+                <el-select
+                    v-model="form.docType"
+                    placeholder="请选择文档类型"
+                    style="width: 100%"
+                    clearable
+                >
+                    <el-option
+                        v-for="item in docTypes"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                    />
+                </el-select>
+            </el-form-item>
+
+            <!-- ============================================================ -->
+            <!-- 部门下拉框：在 departments 数组中填你自己的部门              -->
+            <!-- ============================================================ -->
+            <el-form-item label="所属部门" prop="department">
+                <el-select
+                    v-model="form.department"
+                    placeholder="请选择所属部门"
+                    style="width: 100%"
+                    clearable
+                >
+                    <el-option
+                        v-for="item in departments"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                    />
+                </el-select>
+            </el-form-item>
+
+            <!-- 版本号（浮点数） -->
+            <el-form-item label="版本号" prop="version">
+                <el-input
+                    v-model="form.version"
+                    placeholder="请输入版本号，例如 1.0、2.3.1"
+                    clearable
+                />
+            </el-form-item>
+
+            <!-- 多文件上传（仅 TXT） -->
+            <el-form-item label="选择文档" prop="files">
+                <div class="upload-area" @click="triggerUpload" v-if="form.files.length === 0">
+                    <div class="upload-icon">
+                        <i class="el-icon-folder-opened"></i>
+                    </div>
+                    <div class="upload-text">点击此处选择文档</div>
+                    <div class="upload-hint">仅支持 .txt 文本文件，可多选</div>
+                </div>
+
+                <!-- 已有文件时显示列表 + 继续添加按钮 -->
+                <div style="width: 100%" v-if="form.files.length > 0">
+                    <div class="file-list">
+                        <div class="file-item" v-for="(file, index) in form.files" :key="index">
+                            <div class="file-info">
+                                <i class="el-icon-document file-icon"></i>
+                                <span class="file-name">{{ file.name }}</span>
+                                <span class="file-size">{{ formatSize(file.size) }}</span>
+                            </div>
+                            <i class="el-icon-close file-remove" @click="removeFile(index)"></i>
+                        </div>
+                    </div>
+                    <el-button type="primary" plain size="small" icon="el-icon-plus" @click="triggerUpload" style="margin-top: 8px">
+                        继续添加文档
+                    </el-button>
+                </div>
+
+                <!-- 隐藏的真实文件选择器 -->
+                <input
+                    ref="fileInput"
+                    type="file"
+                    accept=".txt"
+                    multiple
+                    style="display: none"
+                    @change="handleFileChange"
+                />
+                <!-- 表单验证用隐藏字段 -->
+                <input v-model="form.files.length" style="display:none" />
+            </el-form-item>
+
+            <!-- 提交 -->
+            <el-form-item label=" ">
+                <div class="submit-section">
+                    <el-button
+                        type="primary"
+                        class="submit-btn"
+                        :loading="uploading"
+                        :disabled="form.files.length === 0"
+                        @click="submitImport"
+                        icon="el-icon-upload2"
+                    >
+                        {{ uploading ? '导入中...' : '开始导入到向量数据库' }}
+                    </el-button>
+                    <el-button
+                        class="submit-btn"
+                        style="flex: 0.4"
+                        @click="resetForm"
+                        :disabled="uploading"
+                    >
+                        重置
+                    </el-button>
+                </div>
+                <div class="progress-wrap" v-if="uploading">
+                    <el-progress
+                        :percentage="progressPercent"
+                        :status="progressStatus"
+                        :stroke-width="16"
+                        :text-inside="true"
+                    />
+                    <div style="margin-top: 6px; font-size: 13px; color: #909399; text-align: center">
+                        {{ progressText }}
+                    </div>
+                </div>
+            </el-form-item>
+        </el-form>
+
+        <!-- 导入结果 -->
+        <div class="result-panel" v-if="importResult">
+            <el-alert
+                :title="importResult.message"
+                :type="importResult.success ? 'success' : 'error'"
+                :closable="true"
+                show-icon
+                @close="importResult = null"
+            />
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- 工具函数：获取 Token ----------
+    function getToken() {
+        return localStorage.getItem('chat_token');
+    }
+
+    // ---------- 工具函数：跳转到登录页 ----------
+    function redirectToLogin() {
+        window.location.href = '/view/login.html';
+    }
+
+    new Vue({
+        el: '#app',
+        mounted() {
+            // ---------- 检查 Token，不存在则跳转登录 ----------
+            const token = getToken();
+            if (!token) {
+                redirectToLogin();
+                return;
+            }
+        },
+        data() {
+            // 版本号校验：允许 1.0 / 2.3.1 / 10.20.30 这类格式
+            const validateVersion = function (rule, value, callback) {
+                if (!value) {
+                    callback(new Error('请输入版本号'));
+                } else if (!/^\d+(\.\d+)*$/.test(value)) {
+                    callback(new Error('版本号格式不正确，例如 1.0、2.3.1'));
+                } else {
+                    callback();
+                }
+            };
+
+            return {
+                // ============================================================
+                // ★ 在这里填你的文档类型 → 改 label（显示名）和 value（提交值）
+                // ============================================================
+                docTypes: [
+                    { label: '规章制度', value: 'regulation' },
+                    { label: '操作手册', value: 'manual' },
+                    { label: '技术文档', value: 'tech_doc' },
+                    { label: '会议纪要', value: 'meeting_minutes' },
+                    { label: '培训资料', value: 'training' },
+                    { label: '其他文档', value: 'other' },
+                ],
+
+                // ============================================================
+                // ★ 在这里填你的部门 → 改 label（显示名）和 value（提交值）
+                // ============================================================
+                departments: [
+                    { label: '技术部', value: 'tech' },
+                    { label: '产品部', value: 'product' },
+                    { label: '运营部', value: 'operation' },
+                    { label: '市场部', value: 'marketing' },
+                    { label: '人力资源部', value: 'hr' },
+                    { label: '财务部', value: 'finance' },
+                ],
+
+                // ------------- 表单数据 -------------
+                form: {
+                    docType: '',
+                    department: '',
+                    version: '',
+                    files: [],
+                },
+
+                // ------------- 校验规则 -------------
+                rules: {
+                    docType: [
+                        { required: true, message: '请选择文档类型', trigger: 'change' },
+                    ],
+                    department: [
+                        { required: true, message: '请选择所属部门', trigger: 'change' },
+                    ],
+                    version: [
+                        { required: true, validator: validateVersion, trigger: 'blur' },
+                    ],
+                },
+
+                // ------------- 上传状态 -------------
+                uploading: false,
+                progressPercent: 0,
+                progressStatus: '',
+                progressText: '',
+
+                // ------------- 结果 -------------
+                importResult: null,
+            };
+        },
+
+        methods: {
+            // ---------- 触发文件选择 ----------
+            triggerUpload() {
+                this.$refs.fileInput.click();
+            },
+
+            // ---------- 文件选择变更 ----------
+            handleFileChange(e) {
+                var files = e.target.files;
+                if (!files || files.length === 0) return;
+
+                for (var i = 0; i < files.length; i++) {
+                    var f = files[i];
+
+                    // 校验后缀
+                    if (!f.name.toLowerCase().endsWith('.txt')) {
+                        this.$message.warning('文件 "' + f.name + '" 不是 TXT 格式，已跳过');
+                        continue;
+                    }
+
+                    // 去重
+                    if (this.form.files.some(function (item) { return item.name === f.name && item.size === f.size; })) {
+                        this.$message.warning('文件 "' + f.name + '" 已存在，已跳过');
+                        continue;
+                    }
+
+                    this.form.files.push(f);
+                }
+
+                // 重置 input 以便重复选择同一文件
+                this.$refs.fileInput.value = '';
+            },
+
+            // ---------- 移除文件 ----------
+            removeFile(index) {
+                this.form.files.splice(index, 1);
+            },
+
+            // ---------- 文件大小格式化 ----------
+            formatSize(bytes) {
+                if (!bytes) return '0 B';
+                var units = ['B', 'KB', 'MB', 'GB'];
+                var i = 0;
+                var size = bytes;
+                while (size >= 1024 && i < units.length - 1) {
+                    size /= 1024;
+                    i++;
+                }
+                return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+            },
+
+            // ---------- 提交导入 ----------
+            submitImport() {
+                var self = this;
+                this.$refs.formRef.validate(function (valid) {
+                    if (!valid) return;
+
+                    if (self.form.files.length === 0) {
+                        self.$message.warning('请至少选择一个文档');
+                        return;
+                    }
+
+                    self.uploading = true;
+                    self.progressPercent = 0;
+                    self.progressStatus = '';
+                    self.progressText = '正在准备...';
+                    self.importResult = null;
+
+                    // 逐个上传文件
+                    var total = self.form.files.length;
+                    var successCount = 0;
+                    var failCount = 0;
+                    var promises = [];
+
+                    for (var i = 0; i < self.form.files.length; i++) {
+                        (function (file, index) {
+                            var fd = new FormData();
+                            fd.append('doc_type', self.form.docType);
+                            fd.append('department', self.form.department);
+                            fd.append('version', self.form.version);
+                            fd.append('file', file);
+
+                            var p = fetch('http://127.0.0.1:8888/api/rag/documents/upload', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': 'Bearer ' + getToken(),
+                                },
+                                body: fd,
+                            })
+                                .then(function (res) {
+                                    // token 过期 → 跳转登录
+                                    if (res.status === 401 || res.status === 403) {
+                                        localStorage.removeItem('chat_token');
+                                        redirectToLogin();
+                                        throw new Error('登录已过期');
+                                    }
+                                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                                    return res.json();
+                                })
+                                .then(function (data) {
+                                    successCount++;
+                                    self.progressPercent = Math.round((successCount + failCount) / total * 100);
+                                    self.progressText = '已处理 ' + (successCount + failCount) + ' / ' + total;
+                                    return { ok: true, file: file.name, data: data };
+                                })
+                                .catch(function (err) {
+                                    failCount++;
+                                    self.progressPercent = Math.round((successCount + failCount) / total * 100);
+                                    self.progressText = '已处理 ' + (successCount + failCount) + ' / ' + total;
+                                    return { ok: false, file: file.name, error: err.message };
+                                });
+
+                            promises.push(p);
+                        })(self.form.files[i], i);
+                    }
+
+                    Promise.all(promises).then(function (results) {
+                        self.uploading = false;
+                        self.progressStatus = failCount === 0 ? 'success' : 'exception';
+
+                        var msg =
+                            '导入完成：成功 ' + successCount + ' 个' +
+                            (failCount > 0 ? '，失败 ' + failCount + ' 个' : '');
+
+                        self.importResult = {
+                            success: failCount === 0,
+                            message: msg,
+                        };
+
+                        if (failCount === 0) {
+                            self.$message.success(msg);
+                            // 成功后重置
+                            // self.resetForm();
+                        } else {
+                            self.$message.warning(msg);
+                            // 打印失败详情
+                            results.forEach(function (r) {
+                                if (!r.ok) console.error('上传失败:', r.file, r.error);
+                            });
+                        }
+                    });
+                });
+            },
+
+            // ---------- 重置表单 ----------
+            resetForm() {
+                this.form.docType = '';
+                this.form.department = '';
+                this.form.version = '';
+                this.form.files = [];
+                this.uploading = false;
+                this.progressPercent = 0;
+                this.progressStatus = '';
+                this.progressText = '';
+                this.importResult = null;
+                this.$refs.formRef.clearValidate();
+            },
+        },
+    });
+</script>
+</body>
+</html>
