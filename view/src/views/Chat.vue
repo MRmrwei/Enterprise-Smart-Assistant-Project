@@ -62,17 +62,13 @@
                   </div>
                 </template>
 
-                <!-- 最终答案：无推理时不显示顶部分隔线 -->
+                <!-- 最终答案：仅当有答案内容时才显示，推理阶段不出现 -->
                 <div
-                  v-if="msg.answer || msg._answerComplete === false"
+                  v-if="msg.answer"
                   class="answer-section"
                   :class="{ 'no-divider': !msg.reasoning?.length }"
                 >
                   <div class="answer-label">最终答案</div>
-                  <!-- 答案尚未返回时显示加载动画 -->
-                  <div v-if="!msg.answer" class="thinking-placeholder">
-                    <span class="dots"><span></span><span></span><span></span></span>
-                  </div>
                   <div class="answer-text" v-html="msg.answer"></div>
                 </div>
 
