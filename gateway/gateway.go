@@ -13,8 +13,6 @@ import (
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/service"
 	"github.com/zeromicro/go-zero/gateway"
-	"github.com/zeromicro/go-zero/rest"
-	"net/http"
 )
 
 var configFile = flag.String("f", "etc/gateway-api.yaml", "the config file")
@@ -24,9 +22,7 @@ func main() {
 	var c config.Config // 或使用你自定义的 config.Config
 	conf.MustLoad(*configFile, &c)
 
-	gw := gateway.MustNewServer(c.GatewayConf, func(svr *gateway.Server) {
-		rest.WithFileServer("/view/", http.Dir("./view"))(svr.Server)
-	})
+	gw := gateway.MustNewServer(c.GatewayConf)
 	gw.Use(middlewares.AuthWithWhitelist(c.AuthConfig.AccessSecret))
 	app := svc.NewServiceContext(c)
 	routes.Register(gw, app)
