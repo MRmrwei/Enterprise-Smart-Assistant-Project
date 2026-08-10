@@ -44,21 +44,15 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Cpu, ChatDotRound, Upload, UserFilled, SwitchButton } from '@element-plus/icons-vue'
-import { getToken, removeToken } from '../utils/auth'
+import { removeToken } from '../utils/auth'
+import { post } from '../utils/request'
 
 const router = useRouter()
 const loggingOut = ref(false)
 
 const handleLogout = () => {
   loggingOut.value = true
-  const token = getToken()
-  fetch('/logout', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token,
-    },
-  })
+  post('/logout', {})
     .catch(() => {})
     .finally(() => {
       removeToken()
