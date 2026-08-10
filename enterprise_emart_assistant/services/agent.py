@@ -1,6 +1,5 @@
 import asyncio
 import random
-import re
 import string
 from collections.abc import AsyncIterable
 
@@ -96,18 +95,13 @@ class AgentService:
 
     async def _intelligent_stream(self, full_text: str, content_type: str):
         """
-        智能流式输出器。
+        智能流式输出器：逐字符遍历文本，模拟人类打字节奏逐段推送。
 
-        按语义边界切分文本，模拟人类打字节奏逐段推送：
-
-        ┌──────────────┬──────────────────────────────────────────┐
-        │ 字符类型      │ 行为                                     │
-        ├──────────────┼──────────────────────────────────────────┤
-        │ 。！？ / 换行 │ 吐出缓冲 → 长停顿 0.3s（模拟呼吸）        │
-        │ ，；：        │ 留在缓冲，不单独停顿                       │
-        │ 、           │ 视为普通文字，随文字片段一起输出             │
-        │ 普通文字      │ 每 3 个字切一片 → 短停顿 0.06s（模拟逐字） │
-        └──────────────┴──────────────────────────────────────────┘
+        按语义边界切分文本：
+        - 句末标点（。！？）或换行 → 吐出缓冲 + 长停顿 0.3s，模拟呼吸
+        - 句中分隔符（，；：） → 留在缓冲，不单独停顿
+        - 普通文字（含顿号）  → 每 N 字切一片 + 短停顿 0.06s，模拟逐字键入
+          while 循环确保每片严格 ≤ CHUNK_SIZE，不会整段一次输出
 
         Args:
             full_text: 待流式输出的完整文本
@@ -116,29 +110,23 @@ class AgentService:
         Yields:
             dict: {"content": "文本片段", "type": content_type}
         """
-        # 按中文标点切分 — 分组 (...) 让分隔符也保留在列表中
-        segments = re.split(r"([，。！？；：、\n])", full_text)
-
         buffer = ""
-        for seg in segments:
-            if not seg:
-                continue
-
-            buffer += seg
+        for ch in full_text:
+            buffer += ch
 
             # ① 句末标点 / 换行 → 整段输出 + 长停顿
-            if seg in ("。", "！", "？", "\n"):
+            if ch in ("。", "！", "？", "\n"):
                 yield {"content": buffer, "type": content_type}
                 buffer = ""
                 await asyncio.sleep(self._PAUSE_LONG)
 
             # ② 句中分隔符 → 静默累积，不触发输出
-            elif seg in ("，", "；", "："):
+            elif ch in ("，", "；", "："):
                 pass
 
-            # ③ 普通文字（含顿号） → 达到阈值就切一片
+            # ③ 普通文字（含顿号） → 达到阈值就切一片，while 确保每片 ≤ CHUNK_SIZE
             else:
-                if len(buffer) >= self._CHUNK_SIZE:
+                while len(buffer) >= self._CHUNK_SIZE:
                     yield {"content": buffer, "type": content_type}
                     buffer = ""
                     await asyncio.sleep(self._PAUSE_SHORT)
