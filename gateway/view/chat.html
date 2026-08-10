@@ -658,8 +658,7 @@
                     return;
                 }
                 console.log("data = ", data, eventType)
-
-                if (eventType === "init") {
+                if (eventType === "start") {
                     this.threadId = data.thread_id;
                 }else{
                     this.updateAIFromEvent(data, msgIndex, eventType);

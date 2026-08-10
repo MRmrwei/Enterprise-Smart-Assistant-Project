@@ -11,6 +11,7 @@ from pydantics.decision import AIDecision
 from pydantics.intentions import Intention
 from langchain_core.messages import HumanMessage, AIMessage
 from agents.list import agents
+from langgraph.config import get_stream_writer
 
 
 def init_node(state: AgentState):
@@ -40,6 +41,10 @@ def register_nodes(builder: StateGraph):
 def completed_node(state: AgentState):
     """完成节点，最终输出答案"""
     answer = state.get("answer", "")
+
+    writer = get_stream_writer()
+    writer({"type": "answer", "content": answer})
+
     return {"messages": [AIMessage(content=answer)]}
 
 
@@ -64,4 +69,4 @@ def build_graph():
     return builder.compile(checkpointer=checkpointer)
 
 
-# main_graph = build_graph()
+main_graph = build_graph()

@@ -31,7 +31,6 @@ def create_llm(provider: ProviderType | None = None, **overrides) -> BaseChatMod
     Returns:
         BaseLLM 实例
     """
-    print(f"使用 LLM 模型: {overrides}")
     if provider is None:
         provider = config.get("LLM_PROVIDER", "DEEPSEEK")
 
@@ -44,6 +43,8 @@ def create_llm(provider: ProviderType | None = None, **overrides) -> BaseChatMod
     response_format = {"type": "text"}
     if overrides.get("response_format", None) is not None:
         response_format = overrides["response_format"]
+        
+    
 
     if provider == "deepseek":
         return ChatDeepSeek(
@@ -64,6 +65,7 @@ def get_default_llm(**overrides) -> BaseChatModel:
 
 def get_opus_llm(**overrides) -> BaseChatModel:
     overrides = {**overrides, **{"model": "opus"}}
+    print(f"overrides : {overrides}")
     return create_llm(None, **overrides)
 
 

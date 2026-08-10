@@ -15,6 +15,7 @@ from tools.base import tools_container
 from tools.forms import leave_skills
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 
 class FormDataAgent(BaseAgent):
@@ -23,10 +24,15 @@ class FormDataAgent(BaseAgent):
         tools = tools_container.get_tools([leave_skills, "leave_request"])
         return tools
 
-    def get_tools_llm(self, opus: bool = False) -> BaseChatModel:
-        return (get_opus_llm() if opus else get_default_llm()).bind_tools(
-            self.get_tools(), strict=True
-        )
+    def get_tools_llm(self, opus: bool = False, **overrides) -> BaseChatModel:
+        return (
+            get_opus_llm(**overrides) if opus else get_default_llm(**overrides)
+        ).bind_tools(self.get_tools(), strict=True)
+
+    # def get_checkpointer(self) -> None:
+    #     serde = JsonPlusSerializer(allowed_msgpack_modules=[Intention, AIDecision])
+    #     # ✅ 使用自定义序列化器初始化 checkpointer
+    #     return InMemorySaver(serde=serde)
 
     @classmethod
     def get_description(cls) -> str:
@@ -71,6 +77,9 @@ class FormDataAgent(BaseAgent):
             ]
             + messages
         )
+
+       
+
         return self.set_agent_answer(state, aimessage.content)
 
     async def interrupt_node(self, state: FormState):
@@ -90,11 +99,11 @@ class FormDataAgent(BaseAgent):
         return self.set_sub_messages(self.load_sub_messages(state), [confirm_message])
 
     async def ai_router_node(self, state: FormState):
+        # print(f"{self.get_decisio_system_prompt()}\n 用户问题：{state.get('question', '')} ")
 
-        intentions: Intention = state.get("intentions", None)
         messages = self.get_sub_messages(state)
         result: AIDecision = (
-            await self.get_tools_llm(True)
+            await self.get_tools_llm(True, response_format={"type": "json_object"})
             .with_structured_output(AIDecision, method="json_mode")
             .ainvoke(
                 [
@@ -154,46 +163,45 @@ class FormDataAgent(BaseAgent):
 
     def get_decisio_system_prompt(self) -> str:
         return """
-                你是智能流程决策器。根据上下文和工具执行结果，判断当前任务是否已经彻底结束。
-    
-                ## 当前任务状态判断规则（按优先级从高到低）：
-    
-                1. **决策为 "completed"**（任务终结）：
-                - 工具返回了"提交成功"、"创建成功"、"已取消"、"已放弃"等明确终结性结果。
-                - 用户明确表达了结束意图（如"好的，就这样"），且系统已响应。
-                - **用户明确表达放弃当前流程**（如“算了，不请了”、“取消”）。
-    
-                2. **决策为 "parent"**（任务切换/放弃当前子流程）：
-                - **用户的最新消息与当前正在执行的子任务（即当前 Skill/表单）完全无关**，例如：
-                - **用户要求跳转到其他功能**（如“我要查考勤”）。
-                - **注意**：如果用户只是对当前表单的某个字段进行修改或补充（如“改成明天”、“请3天”），则应走 interrupt，而非 parent。
-    
-                3. **决策为 "interrupt"**（继续当前流程，需要用户交互）：
-                - 需要用户补充当前表单的缺失字段。
-                - 需要用户对当前已填信息进行确认或修改。
-                
-                4. **决策为 "tool"**（继续当前流程，需要工具执行）：
-                - 需要调用工具。
-    
-                ## is_interrupt 字段规则：
-                - **true**：需要人工干预（如确认、修改、补全数据）。
-                - **false**：无需人工干预（如自动查询知识库、调用内部工具、返回信息）。
-                - node字段为parent时严禁输出true，用户转变意图时，请将is_interrupt字段设置为false。
-    
-    
-                ## 输出格式（必须 JSON）：
-                {
-                    "node": "completed" | "interrupt" | "parent" | "tool",
-                    "reason": "判断理由（简要说明）",
-                    "is_interrupt": true | false,
-                }
-    
-                ## 重要注意事项：
-                - 你必须严格区分“补充当前表单数据”和“提出全新的独立请求”。
-                - 若新请求不依赖当前未完成的表单数据，请选择 parent。
-                - 若你无法确定，请优先选择 confirm（因为安全），但如果你明确知道新意图与当前任务无关，则必须 parent。
-                - 只输出 JSON，不要额外解释。
-                """
+            你是一个JSON API接口。你的唯一功能是根据输入返回一个JSON对象。
+
+            ## 重要约束（必须严格遵守）
+            1. **你的输出必须只包含一个有效的JSON对象，不能有任何其他文字**。
+            2. **不要输出任何解释、思考过程、Markdown标记或额外的文本**。
+            3. **如果输出包含非JSON字符，系统将立即崩溃**。
+
+            ## 决策规则（按优先级从高到低）
+
+            ### 1. 决策为 "completed"（任务终结）
+            - 工具返回了"提交成功"、"创建成功"、"已取消"、"已放弃"等明确终结性结果。
+            - 用户明确表达了结束意图（如"好的，就这样"），且系统已响应。
+            - 用户明确表达放弃当前流程（如"算了，不请了"、"取消"）。
+
+            ### 2. 决策为 "parent"（任务切换）
+            - **用户的最新消息与当前正在执行的子任务完全无关**。
+            - 例如：用户要求跳转到其他功能（如"我要查考勤"）。
+            - **注意**：如果用户只是对当前表单字段进行修改或补充（如"改成明天"、"请3天"），应走 interrupt，而非 parent。
+
+            ### 3. 决策为 "interrupt"（需要用户交互）
+            - 需要用户补充当前表单的缺失字段。
+            - 需要用户对已填信息进行确认或修改。
+
+            ### 4. 决策为 "tool"（需要工具执行）
+            - 需要调用工具来完成操作。
+
+            ## is_interrupt 字段规则
+            - **true**：需要人工干预（确认、修改、补全数据）。
+            - **false**：无需人工干预（自动工具调用、信息返回）。
+            - **重要**：当 node 为 parent 时，is_interrupt 必须为 false。
+
+            ## 输出格式（必须严格遵循此JSON结构）
+            ```json
+            {
+                "node": "completed",
+                "reason": "判断理由（10字以内）",
+                "is_interrupt": false
+            }
+            """
 
     def get_interrupt_system_prompt(self) -> str:
         return f"""

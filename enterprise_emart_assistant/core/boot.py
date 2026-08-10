@@ -1,19 +1,19 @@
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from tools.base import tools_container
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from core.context import context
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import MCPToolCallRequest
 from configs.config import config
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up")
     await init_mcp_tools()
-    
+
     init_routes(app)
-    
+
     yield
 
     print("Shutting down")
@@ -22,7 +22,6 @@ async def lifespan(app: FastAPI):
 def init_routes(app: FastAPI):
     from routes import chat
     app.include_router(chat.router)
-
 
 
 async def init_mcp_tools():
@@ -38,18 +37,21 @@ async def init_mcp_tools():
             request.headers = {}
 
         # 2. 添加认证头
-        request.headers["Authorization"] = (
-            context.get().token if context.get().token else ""
-        )
-        # request.headers["X-User-Id"] = "test_user"
+        ctx = context.get()
+        if ctx is None:
+            raise Exception("用户未登录，无法调用工具！")
+        else:
+            token = ctx.token
 
-        print(f"✅ 已添加认证头: {request.headers}")
+        # token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE4MTcyMjE5OTEsImlhdCI6MTc4NTY4NTk5MSwibmFtZSI6IuiAgeadvyIsInVpZCI6MX0.FFki-dFYvnCYHmhWwjNzLViFSQOFYXq8kj4_LPDirpY"
+        # 3. 添加认证头
+        request.headers["Authorization"] = token
 
-        # 3. ⚠️ 关键：调用 call_args 执行真正的工具调用
         # call_args 是真正执行工具的函数
         result = await call_args(request)
         # 4. 返回执行结果
         return result
+
     mcp_url = config.get("MCP_ADDR")
     client = MultiServerMCPClient(
         {
@@ -60,6 +62,10 @@ async def init_mcp_tools():
         },
         tool_interceptors=[auth_interceptor],  # 注册拦截器
     )
-    tools = await client.get_tools()
-    tools_container.register(tools)
-    
+
+    try:
+        tools = await client.get_tools()
+        tools_container.register(tools)
+    except Exception as e:
+        # 处理其他异常
+        raise Exception(f"MCP 服务器连接失败: {e}")

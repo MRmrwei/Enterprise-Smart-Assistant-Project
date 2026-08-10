@@ -38,7 +38,6 @@ class AgentService:
                         if type == "reasoning":
                             char["index"] = reason_num
                         yield SSEContent(data=char)
-
                     if type == "reasoning":
                         reason_num += 1
 

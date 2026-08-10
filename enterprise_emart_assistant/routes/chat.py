@@ -26,19 +26,9 @@ router = APIRouter()
 async def chat(
     chatRequest: ChatRequest, request: Request
 ) -> AsyncIterable[ServerSentEvent]:
-
-    [print(f"header = {h}") for h in request.headers.items()]
-    
-    print(f"uid = 11111")
-    
     uid = context.get().uid
     thread_id = chatRequest.thread_id or AgentService.get_thread_id(uid)
-
-    if chatRequest.thread_id == "" or chatRequest.thread_id is None:
-        yield ServerSentEvent(
-            data={"thread_id": thread_id},
-            event="init",
-        )
+    yield ServerSentEvent(data={"thread_id": thread_id}, event="start")
 
     config = {
         "configurable": {
@@ -46,13 +36,19 @@ async def chat(
         }
     }
     state = {
-        "state": "employee",
         "question": chatRequest.question,
-        "role": "employee",
         "uid": uid,
-        "answer": "",
     }
 
+    try:
+        async for result in AgentService().Chat(state, config):
+            yield ServerSentEvent(data=result.data, event=result.event)
+    except Exception as e:
+        yield ServerSentEvent(
+            data={"content": "内部错误，请联系管理员！", "type": "answer"},
+            event="error",
+        )
+        import traceback
 
-    async for result in AgentService().Chat(state, config):
-        yield ServerSentEvent(data=result.data, event=result.event)
+        print(f"错误信息: {e}")
+        print(f"完整堆栈:\n{traceback.format_exc()}")
