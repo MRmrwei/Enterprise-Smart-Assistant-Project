@@ -11,7 +11,10 @@ def _load_config_from_env(provider: str) -> LLMConfig:
     return LLMConfig(
         api_key=config.get(f"{provider}_API_KEY", ""),
         base_url=config.get(f"{provider}_BASE_URL", ""),
-        model=config.get(f"{provider}_MODEL", ""),
+        default_model=config.get(f"{provider}_DEFAULT_MODEL", ""),
+        opus_model=config.get(
+            f"{provider}_OPUS_MODEL", config.get(f"{provider}_DEFAULT_MODEL", "")
+        ),
         temperature=float(config.get(f"{provider}_TEMPERATURE", 0.7)),
         timeout=int(config.get(f"{provider}_TIMEOUT", 60)),
     )
@@ -28,15 +31,15 @@ def create_llm(provider: ProviderType | None = None, **overrides) -> BaseChatMod
     Returns:
         BaseLLM 实例
     """
-
+    print(f"使用 LLM 模型: {overrides}")
     if provider is None:
-        provider = config.get("LLM_PROVIDER", "deepseek")
+        provider = config.get("LLM_PROVIDER", "DEEPSEEK")
 
     llm_config = _load_config_from_env(provider)
 
-    model = llm_config.model
-    if overrides.get("model", None) is not None:
-        model = overrides["model"]
+    model = llm_config.default_model
+    if overrides.get("model", None) == "opus":
+        model = llm_config.opus_model
 
     response_format = {"type": "text"}
     if overrides.get("response_format", None) is not None:
@@ -55,6 +58,12 @@ def create_llm(provider: ProviderType | None = None, **overrides) -> BaseChatMod
 
 
 def get_default_llm(**overrides) -> BaseChatModel:
+
+    return create_llm(None, **overrides)
+
+
+def get_opus_llm(**overrides) -> BaseChatModel:
+    overrides = {**overrides, **{"model": "opus"}}
     return create_llm(None, **overrides)
 
 

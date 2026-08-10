@@ -4,8 +4,9 @@ from langchain.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 from langgraph.types import Command, interrupt
 from langgraph.prebuilt import ToolNode
+from sqlalchemy import True_
 from agents.base import BaseAgent
-from llms.factory import get_default_llm
+from llms.factory import get_default_llm, get_opus_llm
 from agents.form.state import FormState
 from langchain.tools import BaseTool
 from pydantics.decision import AIDecision
@@ -22,8 +23,10 @@ class FormDataAgent(BaseAgent):
         tools = tools_container.get_tools([leave_skills, "leave_request"])
         return tools
 
-    def get_tools_llm(self) -> BaseChatModel:
-        return get_default_llm().bind_tools(self.get_tools(), strict=True)
+    def get_tools_llm(self, opus: bool = False) -> BaseChatModel:
+        return (get_opus_llm() if opus else get_default_llm()).bind_tools(
+            self.get_tools(), strict=True
+        )
 
     @classmethod
     def get_description(cls) -> str:
@@ -91,7 +94,7 @@ class FormDataAgent(BaseAgent):
         intentions: Intention = state.get("intentions", None)
         messages = self.get_sub_messages(state)
         result: AIDecision = (
-            await self.get_tools_llm()
+            await self.get_tools_llm(True)
             .with_structured_output(AIDecision, method="json_mode")
             .ainvoke(
                 [
@@ -111,7 +114,6 @@ class FormDataAgent(BaseAgent):
                 goto="init_node",
                 update={"question": messages[-1].content},
             )
-
         elif result.node == "interrupt":
             return Command(goto="interrupt", update=state)
         elif result.node == "tool":
