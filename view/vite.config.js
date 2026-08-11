@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
           target: backend,
           bypass: (req) => req.method === 'GET' ? req.url : null,
         },
+        '/upload_rag_file': backend,
         '/api': backend,
       },
     },

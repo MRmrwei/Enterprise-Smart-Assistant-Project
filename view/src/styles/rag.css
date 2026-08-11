@@ -152,21 +152,31 @@
 }
 
 .file-item .file-remove {
-    color: #ef4444;
-    cursor: pointer;
-    font-size: 16px;
     flex-shrink: 0;
-    padding: 6px;
-    border-radius: 6px;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.file-item .file-remove:hover {
-    background: #fef2f2;
-    color: #dc2626;
+.file-item .file-left {
+    overflow: hidden;
+    flex: 1;
+}
+
+.file-item .file-error {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #f56c6c;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- 文件计数提示 ---- */
+.file-count-hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #94a3b8;
 }
 
 /* ---- 提交区域 ---- */

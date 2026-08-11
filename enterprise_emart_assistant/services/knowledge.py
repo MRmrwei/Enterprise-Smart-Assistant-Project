@@ -14,6 +14,7 @@ from langchain_community.document_loaders import TextLoader
 def upload_knowledge(path: str, **kwargs):
     
     loader = TextLoader(path, encoding="utf-8")
+    
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=350,  # 每块 350 字（中文约 400 Token）
         chunk_overlap=50,

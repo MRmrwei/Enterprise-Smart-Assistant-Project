@@ -26,8 +26,13 @@ async def lifespan(app: FastAPI):
 
 
 def init_routes(app: FastAPI):
-    from app.controllers import chat
-    app.include_router(chat.router)
+    import pkgutil
+    import importlib
+    package = importlib.import_module("app.controllers")
+    for _, module_name, _ in pkgutil.iter_modules(package.__path__):
+        module = importlib.import_module(f"app.controllers.{module_name}")
+        if hasattr(module, "router"):
+            app.include_router(module.router)
 
 
 @stamina.retry(attempts=3, on=Exception)

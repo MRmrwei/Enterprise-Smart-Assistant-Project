@@ -24,13 +24,13 @@ Upstreams:
     Mappings:
       - Method: POST
         Path: /mcp
-#  - Http:
-#      Name: "agent"
-#      Target: localhost:8084
-#      Timeout: 60000
-#    Mappings:
-#      - Method: POST
-#        Path: /chat
+  - Http:
+      Name: "agent"
+      Target: localhost:8084
+      Timeout: 60000
+    Mappings:
+      - Method: POST
+        Path: /upload_rag_file
 
 AgentAddr:
   - Host: http://127.0.0.1:8084

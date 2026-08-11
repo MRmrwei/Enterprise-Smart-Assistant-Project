@@ -3,7 +3,7 @@ import random
 import string
 from collections.abc import AsyncIterable
 from graphs.main_graph import main_graph
-from pydantics.sse import SSEContent
+from pydantics.response import SSEContent
 from langgraph.types import Command
 from db.caches.client import cache
 

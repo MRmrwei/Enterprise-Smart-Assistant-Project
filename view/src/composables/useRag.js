@@ -1,6 +1,8 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { upload as uploadFile } from '../utils/request'
+import { getToken, removeToken } from '../utils/auth'
+
+const MAX_FILES = 10
 
 // 下拉选项（业务数据，不依赖响应式）
 const docTypes = [
@@ -21,9 +23,14 @@ const departments = [
   { label: '财务部', value: 'finance' },
 ]
 
+const chunkStrategies = [
+  { label: '父子块', value: 'parent_child' },
+  { label: '通用', value: 'general' },
+]
+
 export function useRag() {
   // ---- 表单 ----
-  const form = reactive({ docType: '', department: '', version: '', files: [] })
+  const form = reactive({ docType: '', department: '', version: '', chunkStrategy: '', files: [] })
 
   const validateVersion = (rule, value, callback) => {
     if (!value) callback(new Error('请输入版本号'))
@@ -43,6 +50,7 @@ export function useRag() {
   const progressStatus = ref('')
   const progressText = ref('')
   const importResult = ref(null)
+  const fileErrors = reactive({})  // { filename: errorMessage }
 
   // ---- DOM 引用 ----
   const formRef = ref(null)
@@ -50,22 +58,35 @@ export function useRag() {
 
   // ---- 文件操作 ----
   function triggerUpload() {
+    if (form.files.length >= MAX_FILES) {
+      ElMessage.warning(`最多只能上传 ${MAX_FILES} 个文件`)
+      return
+    }
     fileInput.value?.click()
   }
 
   function handleFileChange(e) {
     const files = e.target.files
     if (!files || files.length === 0) return
-    for (let i = 0; i < files.length; i++) {
+
+    const remaining = MAX_FILES - form.files.length
+    if (files.length > remaining) {
+      ElMessage.warning(`还能添加 ${remaining} 个文件，当前选择了 ${files.length} 个，超出的文件将被跳过`)
+    }
+
+    for (let i = 0; i < Math.min(files.length, remaining); i++) {
       const f = files[i]
       if (!f.name.toLowerCase().endsWith('.txt')) { ElMessage.warning(`文件 "${f.name}" 不是 TXT 格式，已跳过`); continue }
       if (form.files.some(item => item.name === f.name && item.size === f.size)) { ElMessage.warning(`文件 "${f.name}" 已存在，已跳过`); continue }
       form.files.push(f)
     }
+
     if (fileInput.value) fileInput.value.value = ''
   }
 
   function removeFile(index) {
+    const f = form.files[index]
+    if (f) delete fileErrors[f.name]
     form.files.splice(index, 1)
   }
 
@@ -77,7 +98,7 @@ export function useRag() {
     return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i]
   }
 
-  // ---- 提交 ----
+  // ---- 提交（XMLHttpRequest 实现上传进度） ----
   function submitImport() {
     formRef.value.validate((valid) => {
       if (!valid) return
@@ -86,58 +107,116 @@ export function useRag() {
       uploading.value = true
       progressPercent.value = 0
       progressStatus.value = ''
-      progressText.value = '正在准备...'
+      progressText.value = '正在上传...'
       importResult.value = null
 
-      const total = form.files.length
-      let successCount = 0, failCount = 0
-      const promises = []
-
+      // 构建 FormData
+      const fd = new FormData()
+      fd.append('doc_type', form.docType)
+      fd.append('department', form.department)
+      fd.append('version', form.version)
+      fd.append('chunk_strategy', form.chunkStrategy)
       for (let i = 0; i < form.files.length; i++) {
-        const file = form.files[i]
-        const fd = new FormData()
-        fd.append('doc_type', form.docType)
-        fd.append('department', form.department)
-        fd.append('version', form.version)
-        fd.append('file', file)
-
-        const p = uploadFile('/api/rag/documents/upload', fd)
-          .then(data => {
-            successCount++
-            progressPercent.value = Math.round((successCount + failCount) / total * 100)
-            progressText.value = `已处理 ${successCount + failCount} / ${total}`
-            return { ok: true, file: file.name, data }
-          })
-          .catch(err => {
-            failCount++
-            progressPercent.value = Math.round((successCount + failCount) / total * 100)
-            progressText.value = `已处理 ${successCount + failCount} / ${total}`
-            return { ok: false, file: file.name, error: err.message }
-          })
-        promises.push(p)
+        fd.append('files', form.files[i])
       }
 
-      Promise.all(promises).then(results => {
-        uploading.value = false
-        progressStatus.value = failCount === 0 ? 'success' : 'exception'
-        const msg = `导入完成：成功 ${successCount} 个` + (failCount > 0 ? `，失败 ${failCount} 个` : '')
-        importResult.value = { success: failCount === 0, message: msg }
-        if (failCount === 0) ElMessage.success(msg)
-        else { ElMessage.warning(msg); results.forEach(r => { if (!r.ok) console.error('上传失败:', r.file, r.error) }) }
+      // 使用 XMLHttpRequest 以获取上传进度
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100)
+          progressPercent.value = pct
+          progressText.value = `上传中 ${pct}%`
+        }
       })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 401 || xhr.status === 403) {
+          removeToken()
+          window.location.href = '/login'
+          uploading.value = false
+          return
+        }
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          progressPercent.value = 100
+          progressStatus.value = 'success'
+
+          let body
+          try { body = JSON.parse(xhr.responseText) } catch (e) { body = {} }
+
+          const results = body.data?.results || []
+
+          // 记录每个文件的错误信息
+          for (const r of results) {
+            if (!r.success) {
+              fileErrors[r.filename] = r.error || '未知错误'
+            } else {
+              delete fileErrors[r.filename]
+            }
+          }
+
+          const failedNames = new Set(
+            results.filter(r => !r.success).map(r => r.filename)
+          )
+
+          // 移除已成功的文件，只保留失败的让用户重新上传
+          form.files = form.files.filter(f => failedNames.has(f.name))
+
+          const msg = body.message || '导入完成'
+          progressText.value = msg
+          ElMessage.success(msg)
+        } else {
+          progressStatus.value = 'exception'
+
+          let detail = `请求失败 (${xhr.status})`
+          try { const body = JSON.parse(xhr.responseText); detail = body.detail || body.message || detail } catch (e) {}
+
+          progressText.value = detail
+          importResult.value = { success: false, message: detail }
+          ElMessage.error(detail)
+        }
+
+        uploading.value = false
+      })
+
+      xhr.addEventListener('error', () => {
+        uploading.value = false
+        progressStatus.value = 'exception'
+        progressText.value = '网络错误，上传失败'
+        importResult.value = { success: false, message: '网络错误，上传失败' }
+        ElMessage.error('网络错误，上传失败')
+      })
+
+      xhr.addEventListener('abort', () => {
+        uploading.value = false
+        progressStatus.value = 'exception'
+        progressText.value = '上传已取消'
+      })
+
+      // 设置认证头
+      const token = getToken()
+      xhr.open('POST', '/upload_rag_file')
+      if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+
+      xhr.send(fd)
     })
   }
 
   function resetForm() {
-    form.docType = ''; form.department = ''; form.version = ''; form.files = []
+    form.docType = ''; form.department = ''; form.version = ''; form.chunkStrategy = ''; form.files = []
     uploading.value = false; progressPercent.value = 0; progressStatus.value = ''
     progressText.value = ''; importResult.value = null
+    Object.keys(fileErrors).forEach(k => delete fileErrors[k])
     formRef.value?.clearValidate()
   }
 
   return {
+    MAX_FILES,
     docTypes,
     departments,
+    chunkStrategies,
     form,
     rules,
     uploading,
@@ -145,6 +224,7 @@ export function useRag() {
     progressStatus,
     progressText,
     importResult,
+    fileErrors,
     formRef,
     fileInput,
     triggerUpload,
