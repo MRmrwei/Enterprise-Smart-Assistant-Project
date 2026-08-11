@@ -1,25 +1,16 @@
-import json
-from turtle import st
-from typing import Optional
-from starlette.requests import ClientDisconnect
-from fastapi import APIRouter, HTTPException, Header, Request
-from fastapi.sse import EventSourceResponse, ServerSentEvent
+from fastapi import APIRouter, Request
+from fastapi.sse import ServerSentEvent, EventSourceResponse
 from pydantic import BaseModel
 from collections.abc import AsyncIterable
-import logging
-from pydantics.sse import SSEContent
 from core.context import context
 from services.agent import AgentService
 
-logger = logging.getLogger(__name__)
+router = APIRouter()
 
 
 class ChatRequest(BaseModel):
     question: str | None
     thread_id: str | None = ""
-
-
-router = APIRouter()
 
 
 @router.post("/chat", response_class=EventSourceResponse)

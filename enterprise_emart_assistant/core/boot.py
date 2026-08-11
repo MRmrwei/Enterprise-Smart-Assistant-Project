@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
+import stamina
 from tools.base import tools_container
 from core.context import context
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -10,7 +11,12 @@ from configs.config import config
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up")
-    await init_mcp_tools()
+
+    try:
+        await init_mcp_tools()
+    except Exception as e:
+        # 处理其他异常
+        raise Exception(f"MCP 启动失败: {e}")
 
     init_routes(app)
 
@@ -20,10 +26,11 @@ async def lifespan(app: FastAPI):
 
 
 def init_routes(app: FastAPI):
-    from routes import chat
+    from app.controllers import chat
     app.include_router(chat.router)
 
 
+@stamina.retry(attempts=3, on=Exception)
 async def init_mcp_tools():
 
     async def auth_interceptor(request: MCPToolCallRequest, call_args):

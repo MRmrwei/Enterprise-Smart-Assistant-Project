@@ -37,5 +37,6 @@ async def intention_node(state: AgentState):
     # )
 
     state["intentions"] = intentions
-
+    writer = get_stream_writer()
+    writer({"type": "reasoning", "content": intentions.description})
     return state

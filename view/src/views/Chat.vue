@@ -39,7 +39,7 @@
             <!-- AI 消息 -->
             <template v-if="msg.type === 'ai'">
               <!-- 思考中动画 -->
-              <div v-if="msg.thinking" class="thinking-placeholder">
+              <div v-if="msg.thinking || (!msg.answer && !msg._answerComplete)" class="thinking-placeholder">
                 <span>正在思考</span>
                 <span class="dots"><span></span><span></span><span></span></span>
               </div>
@@ -57,7 +57,11 @@
                       :key="bi"
                       class="reasoning-block"
                     >
-                      <div class="block-content" v-html="block.content"></div>
+                      <div
+                        class="block-content"
+                        :class="{ 'is-streaming': !msg.answer && bi === msg.reasoning.length - 1 }"
+                        v-html="block.content"
+                      ></div>
                     </div>
                   </div>
                 </template>
@@ -69,7 +73,11 @@
                   :class="{ 'no-divider': !msg.reasoning?.length }"
                 >
                   <div class="answer-label">最终答案</div>
-                  <div class="answer-text" v-html="msg.answer"></div>
+                  <div
+                    class="answer-text"
+                    :class="{ 'is-streaming': !msg._answerComplete }"
+                    v-html="msg.answer"
+                  ></div>
                 </div>
 
                 <!-- 错误信息 -->

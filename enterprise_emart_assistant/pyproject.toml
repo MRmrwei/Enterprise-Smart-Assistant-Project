@@ -25,6 +25,7 @@ dependencies = [
     "load-dotenv>=0.1.0",
     "mcp<2.0.0",
     "redis[hiredis]>=8.1.0",
+    "stamina>=26.1.0",
 ]
 
 [dependency-groups]

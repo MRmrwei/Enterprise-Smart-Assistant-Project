@@ -2,7 +2,6 @@ import asyncio
 import random
 import string
 from collections.abc import AsyncIterable
-
 from graphs.main_graph import main_graph
 from pydantics.sse import SSEContent
 from langgraph.types import Command
@@ -47,6 +46,7 @@ class AgentService:
             cache.delete(f"{thread_id}:interrupts")
             # 恢复：把用户本次回复作为 resume 值注入
             stream_input = Command(resume=state.get("question"))
+            print(f"resume {stream_input}")
         else:
             # 新对话：直接把用户输入传给主图
             stream_input = state

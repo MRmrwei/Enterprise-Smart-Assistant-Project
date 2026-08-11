@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from langchain.messages import AIMessage, HumanMessage, SystemMessage
@@ -5,6 +6,7 @@ from langgraph.graph import StateGraph
 from langgraph.types import Command, interrupt
 from langgraph.prebuilt import ToolNode
 from sqlalchemy import True_
+import stamina
 from agents.base import BaseAgent
 from llms.factory import get_default_llm, get_opus_llm
 from agents.form.state import FormState
@@ -16,6 +18,8 @@ from tools.forms import leave_skills
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langgraph.config import get_stream_writer
+
 
 
 class FormDataAgent(BaseAgent):
@@ -78,8 +82,6 @@ class FormDataAgent(BaseAgent):
             + messages
         )
 
-       
-
         return self.set_agent_answer(state, aimessage.content)
 
     async def interrupt_node(self, state: FormState):
@@ -99,24 +101,32 @@ class FormDataAgent(BaseAgent):
         return self.set_sub_messages(self.load_sub_messages(state), [confirm_message])
 
     async def ai_router_node(self, state: FormState):
-        # print(f"{self.get_decisio_system_prompt()}\n 用户问题：{state.get('question', '')} ")
-
         messages = self.get_sub_messages(state)
-        result: AIDecision = (
-            await self.get_tools_llm(True, response_format={"type": "json_object"})
-            .with_structured_output(AIDecision, method="json_mode")
-            .ainvoke(
-                [
-                    SystemMessage(
-                        content=f"{self.get_decisio_system_prompt()}\n 用户问题：{state.get('question', '')} "
-                    )
-                ]
-                + messages
-            )
+
+        # 使用干净的 opus LLM + json_mode 获取结构化决策
+        # 不绑表单工具，避免与 structured output 冲突
+        system_prompt = (
+            "你是一个智能决策路由器。请根据对话历史输出 JSON 格式的决策。\n"
+            f"用户问题：{state.get('question', '')}\n"
+            + self.get_decisio_system_prompt()
         )
 
+        llm = get_opus_llm(response_format={"type": "json_object"})
+        structured_llm = llm.with_structured_output(AIDecision, method="json_mode")
+
+        try:
+            for attempt in stamina.retry_context(on=Exception, attempts=3):
+                with attempt:
+                    result: AIDecision = await structured_llm.ainvoke(
+                        [SystemMessage(content=system_prompt)] + messages
+                    )
+        except Exception as e:
+            raise Exception(f"AI 决策 JSON 解析失败（已重试 {attempt.num} 次）: {e}")
+
         print(f"AI决策： {result}")
-        state["decision"] = result
+        writer = get_stream_writer()
+        writer({"type": "reasoning", "content": result.reason})
+
         if result.node == "parent":
             return Command(
                 graph=Command.PARENT,
@@ -163,13 +173,6 @@ class FormDataAgent(BaseAgent):
 
     def get_decisio_system_prompt(self) -> str:
         return """
-            你是一个JSON API接口。你的唯一功能是根据输入返回一个JSON对象。
-
-            ## 重要约束（必须严格遵守）
-            1. **你的输出必须只包含一个有效的JSON对象，不能有任何其他文字**。
-            2. **不要输出任何解释、思考过程、Markdown标记或额外的文本**。
-            3. **如果输出包含非JSON字符，系统将立即崩溃**。
-
             ## 决策规则（按优先级从高到低）
 
             ### 1. 决策为 "completed"（任务终结）
@@ -194,13 +197,8 @@ class FormDataAgent(BaseAgent):
             - **false**：无需人工干预（自动工具调用、信息返回）。
             - **重要**：当 node 为 parent 时，is_interrupt 必须为 false。
 
-            ## 输出格式（必须严格遵循此JSON结构）
-            ```json
-            {
-                "node": "completed",
-                "reason": "判断理由（10字以内）",
-                "is_interrupt": false
-            }
+            请严格按照以下 JSON 结构输出决策：
+            {"node": "节点名", "reason": "判断理由", "is_interrupt": false}
             """
 
     def get_interrupt_system_prompt(self) -> str:

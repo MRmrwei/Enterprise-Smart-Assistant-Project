@@ -190,6 +190,17 @@
 .block-content p { margin: 0; }
 .block-content strong { color: #409EFF; }
 
+/* ── 打字机光标（推理块流式输出中） ── */
+.block-content.is-streaming::after {
+    content: '▍';
+    display: inline;
+    color: #409EFF;
+    font-weight: 400;
+    animation: typing-cursor-blink 0.8s step-end infinite;
+    vertical-align: baseline;
+    margin-left: 1px;
+}
+
 /* ---- 最终答案 ---- */
 .answer-section { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 2px; }
 /* 无推理内容时去掉答案区域的顶部分隔线 */
@@ -207,6 +218,23 @@
 }
 .answer-text { font-size: 15px; line-height: 1.75; color: #1e293b; }
 .answer-text strong { color: #409EFF; font-weight: 600; }
+
+/* ── 打字机光标（最终答案流式输出中） ── */
+.answer-text.is-streaming::after {
+    content: '▍';
+    display: inline;
+    color: #67C23A;
+    font-weight: 400;
+    animation: typing-cursor-blink 0.8s step-end infinite;
+    vertical-align: baseline;
+    margin-left: 1px;
+}
+
+/* ── 光标闪烁关键帧 ── */
+@keyframes typing-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+}
 
 /* ---- 错误信息 ---- */
 .error-message {
