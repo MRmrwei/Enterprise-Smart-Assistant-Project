@@ -2,6 +2,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 import time
+from db.vector import vector_store
 
 
 class RagUploadService:
@@ -32,9 +33,14 @@ class RagUploadService:
             doc.metadata["creaate_time"] = int(time.time())
 
         # [print(doc.metadata) for doc in docs]
-        
-        # 存入向量数据库（待实现）
 
+        # 存入向量数据库
+        try:
+            res = vector_store.add_documents(docs)
+        except Exception as e:
+            print(e)
+            raise e
+        print(f"添加向量数据库成功---> {res}")
     def parent_recursive_document(self, file_path: str) -> list[Document]:
         """
         父子块文档切分：

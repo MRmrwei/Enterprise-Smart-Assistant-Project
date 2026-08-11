@@ -195,9 +195,18 @@ export function useRag() {
         progressText.value = '上传已取消'
       })
 
+      xhr.addEventListener('timeout', () => {
+        uploading.value = false
+        progressStatus.value = 'exception'
+        progressText.value = '处理超时，请稍后重试'
+        importResult.value = { success: false, message: '处理超时，请稍后重试' }
+        ElMessage.error('处理超时，请稍后重试')
+      })
+
       // 设置认证头
       const token = getToken()
       xhr.open('POST', '/upload_rag_file')
+      xhr.timeout = 5 * 60 * 1000  // 5 分钟超时
       if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token)
 
       xhr.send(fd)

@@ -1,6 +1,7 @@
 Name: gateway-api
 Host: 0.0.0.0
 Port: 8888
+Timeout: 60000
 
 AuthConfig:
   AccessSecret: "{B)N;+)kTKDxHq@NERDUqS?A34OgzU-k"
@@ -27,7 +28,7 @@ Upstreams:
   - Http:
       Name: "agent"
       Target: localhost:8084
-      Timeout: 60000
+      Timeout: 6000
     Mappings:
       - Method: POST
         Path: /upload_rag_file
