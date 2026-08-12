@@ -12,7 +12,7 @@ import (
 )
 
 var whitelistPaths = []string{
-	"/login", "/view",
+	"/login",
 }
 
 func AuthWithWhitelist(secret string, opts ...handler.AuthorizeOption) rest.Middleware {
