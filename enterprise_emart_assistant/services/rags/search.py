@@ -1,5 +1,6 @@
 from langchain_core.documents import Document
 from db.vector import vector_store
+from db.rerank.factory import reranker
 
 
 async def mixed_parent_search(question: str, k=5):
@@ -9,7 +10,7 @@ async def mixed_parent_search(question: str, k=5):
     1.使用重排筛选
     2.子块去重吗，父块召回
     """
-    docs = rerank_search(await asimilarity_search(question, k))
+    docs = await rerank_search(question, await asimilarity_search(question, k))
 
     # [
     #     print(
@@ -126,11 +127,12 @@ def parent_search(doc: Document) -> list[Document]:
     return docs
 
 
-def rerank_search(docs: list[Document] | None = []) -> list[Document]:
+async def rerank_search(question: str, docs: list[Document]) -> list[Document]:
     """
     重排筛选
     """
     if len(docs) == 0:
         return []
 
+    docs = await reranker.arerank(question, docs)
     return docs
