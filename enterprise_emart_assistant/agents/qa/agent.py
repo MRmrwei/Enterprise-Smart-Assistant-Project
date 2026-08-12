@@ -5,6 +5,7 @@ from db.vector import vector_store
 from agents.base import BaseAgent
 from graphs.state import AgentState
 from llms.factory import get_default_llm
+from services.rags.search import mixed_parent_search
 
 SYSTEM_PROMPT = """
               你是一个基于私有知识库的问答机器人。
@@ -50,10 +51,11 @@ class QaAgent(BaseAgent):
 
     def get_state(self) -> AgentState:
         return QaState
+
     async def vector_store_node(self, state: QaState):
         question = state.get("question", "")
         messages = state.get("messages", [])
-        docs = await vector_store.asimilarity_search(question)
+        docs = await mixed_parent_search(question)
 
         # 将检索到的文档暂存到 state，供 review 节点使用
         context = "\n".join([f"{doc.page_content}\n" for doc in docs])
@@ -84,10 +86,13 @@ class QaAgent(BaseAgent):
         review_prompt = REVIEW_PROMPT.format(question=question, answer=answer)
         print(f"[review] 第 {retry_count + 1} 次审核...")
 
-        response = await get_default_llm().ainvoke([HumanMessage(content=review_prompt)])
+        response = await get_default_llm().ainvoke(
+            [HumanMessage(content=review_prompt)]
+        )
 
         # 解析审核结果
         import json
+
         try:
             result = json.loads(response.content)
         except json.JSONDecodeError:

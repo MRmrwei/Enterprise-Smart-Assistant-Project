@@ -104,11 +104,18 @@ class BaseAgent(ABC):
 
     def load_sub_messages(self, state: AgentState) -> AgentState:
         """
-        从寄存器中加载会话状态
+        从寄存器中加载子agent的会话状态
         """
-
         self.set_sub_messages(state, self.get_history_messages(state))
+        self.clear_history_messages(state)
         return state
 
     def get_sub_messages_key(self) -> str:
         return self.get_state().get_message_key()
+
+    def clear_history_messages(self, state: AgentState) -> AgentState:
+        """
+        清空子agent的会话状态
+        """
+        state.update({"agent_messages": {self.get_key(): []}})
+        return state

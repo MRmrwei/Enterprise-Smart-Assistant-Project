@@ -3,6 +3,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 import time
 from db.vector import vector_store
+import random
 
 
 class RagUploadService:
@@ -30,7 +31,7 @@ class RagUploadService:
             doc.metadata["department"] = department
             doc.metadata["version"] = version
             doc.metadata["doc_type"] = doc_type
-            doc.metadata["creaate_time"] = int(time.time())
+            doc.metadata["create_time"] = int(time.time())
 
         # [print(doc.metadata) for doc in docs]
 
@@ -41,6 +42,7 @@ class RagUploadService:
             print(e)
             raise e
         print(f"添加向量数据库成功---> {res}")
+
     def parent_recursive_document(self, file_path: str) -> list[Document]:
         """
         父子块文档切分：
@@ -75,6 +77,7 @@ class RagUploadService:
         )
 
         result: list[Document] = []
+        only_id = self.generate_random_number(15)
         for parent_idx, parent_text in enumerate(parent_texts):
             parent_id = f"parent_{parent_idx + 1}"
 
@@ -87,6 +90,7 @@ class RagUploadService:
                         "chunk_type": "parent",
                         "chunk_index": parent_idx,
                         "source": file_path,
+                        "only_id": only_id,
                     },
                 )
             )
@@ -103,6 +107,7 @@ class RagUploadService:
                             "chunk_type": "child",
                             "chunk_index": child_idx,
                             "source": file_path,
+                            "only_id": only_id,
                         },
                     )
                 )
@@ -123,10 +128,26 @@ class RagUploadService:
         )
 
         docs = loader.load_and_split(splitter)
-
+        only_id = self.generate_random_number(15)
         for index, doc in enumerate(docs):
             doc.metadata["source"] = file_path
             doc.metadata["chunk_type"] = "recursive_char"
             doc.metadata["chunk_index"] = index
             doc.metadata["doc_id"] = index + 1
+            doc.metadata["only_id"] = only_id
         return docs
+
+    def generate_random_number(self, length):
+        """
+        生成指定长度的随机数字，首位不能为0
+
+        参数:
+            length: 数字的长度
+        返回:
+            随机数字字符串
+        """
+        first = str(random.randint(1, 9))  # 第一位1-9
+        rest = "".join(
+            str(random.randint(0, 9)) for _ in range(length - 1)
+        )  # 剩余位0-9
+        return first + rest
