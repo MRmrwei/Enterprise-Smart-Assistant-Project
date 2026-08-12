@@ -17,6 +17,7 @@ dist/
 *.local
 *.log
 npm-debug.log*
+.vite/
 
 # ===== OS =====
 Thumbs.db
