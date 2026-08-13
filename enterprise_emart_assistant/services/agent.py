@@ -135,24 +135,4 @@ class AgentService:
         if buffer:
             yield {"content": buffer, "type": content_type}
 
-    # ─────────────────────────────────────────────────────────────
-    #  工具方法
-    # ─────────────────────────────────────────────────────────────
-
-    @staticmethod
-    def get_thread_id(uid: int) -> str:
-        """
-        生成唯一的会话线程 ID。
-
-        格式：{12 位随机字母数字}_{用户 ID}
-        随机部分使用 62 字符空间（a-z, A-Z, 0-9），碰撞概率极低。
-
-        Args:
-            uid: 用户 ID
-
-        Returns:
-            str: 线程唯一标识
-        """
-        chars = string.ascii_letters + string.digits
-        random_part = "".join(random.choice(chars) for _ in range(12))
-        return f"{random_part}_{uid}"
+  

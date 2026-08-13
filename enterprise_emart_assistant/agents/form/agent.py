@@ -21,7 +21,6 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.config import get_stream_writer
 
 
-
 class FormDataAgent(BaseAgent):
 
     def get_tools(self) -> list[BaseTool]:
@@ -34,7 +33,7 @@ class FormDataAgent(BaseAgent):
         ).bind_tools(self.get_tools(), strict=True)
 
     # def get_checkpointer(self) -> None:
-    #     serde = JsonPlusSerializer(allowed_msgpack_modules=[Intention, AIDecision])
+    #     serde = JsonPlusSerializer(allowed_msgpack_modules=[AIDecision])
     #     # ✅ 使用自定义序列化器初始化 checkpointer
     #     return InMemorySaver(serde=serde)
 
@@ -94,11 +93,9 @@ class FormDataAgent(BaseAgent):
             + self.get_sub_messages(state)
         )
 
-        # 因为中断了所以需要寄存
-        self.set_history_messages(state, self.get_sub_messages(state) + [aimessage])
         confirm_message = HumanMessage(content=interrupt(aimessage.content))
         # 重新加载子agent上下文
-        return self.set_sub_messages(self.load_sub_messages(state), [confirm_message])
+        return self.set_sub_messages(state, [aimessage, confirm_message])
 
     async def ai_router_node(self, state: FormState):
         messages = self.get_sub_messages(state)

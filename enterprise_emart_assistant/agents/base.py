@@ -60,23 +60,6 @@ class BaseAgent(ABC):
     def get_checkpointer(self):
         return None
 
-    def get_history_messages(self, state: AgentState) -> list[AnyMessage]:
-        """
-        获取子agent在寄存器的会话状态
-        """
-
-        return state.get("agent_messages", {}).get(self.get_key(), [])
-
-    def set_history_messages(
-        self, state: AgentState, messages: list[AnyMessage]
-    ) -> AgentState:
-        """
-        设置子agent在寄存器的会话状态
-        """
-
-        state.update({"agent_messages": {self.get_key(): messages}})
-        return state
-
     def set_agent_answer(self, state: AgentState, answer: str) -> AgentState:
         """
         设置子agent的答案
@@ -102,20 +85,5 @@ class BaseAgent(ABC):
 
         return state.get(self.get_state().get_message_key(), [])
 
-    def load_sub_messages(self, state: AgentState) -> AgentState:
-        """
-        从寄存器中加载子agent的会话状态
-        """
-        self.set_sub_messages(state, self.get_history_messages(state))
-        self.clear_history_messages(state)
-        return state
-
     def get_sub_messages_key(self) -> str:
         return self.get_state().get_message_key()
-
-    def clear_history_messages(self, state: AgentState) -> AgentState:
-        """
-        清空子agent的会话状态
-        """
-        state.update({"agent_messages": {self.get_key(): []}})
-        return state
