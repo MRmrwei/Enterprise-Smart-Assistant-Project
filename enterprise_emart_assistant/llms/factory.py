@@ -6,11 +6,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langfuse.langchain import CallbackHandler
 
 ProviderType = Literal["deepseek"]
-# LANGFUSE_HANDLER = CallbackHandler(
-#     secret_key=config.get("LANGFUSE_SECRET_KEY"),
-#     public_key=config.get("LANGFUSE_PUBLIC_KEY"),
-#     host=config.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-# )
+
 
 
 def _load_config_from_env(provider: str) -> LLMConfig:
