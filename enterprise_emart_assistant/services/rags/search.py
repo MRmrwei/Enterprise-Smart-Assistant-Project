@@ -1,5 +1,5 @@
 from langchain_core.documents import Document
-from db.vectors.vector import vector_store
+from db.vectors.vector import get_vector_store
 from db.rerank.factory import reranker
 
 
@@ -72,12 +72,12 @@ def mixed_search(question: str) -> list[Document]:
     """
     混合搜索，使用向量搜索与bm25搜索
     """
-    return vector_store.similarity_search(question, k=30)
+    return get_vector_store().similarity_search(question, k=30)
 
 
 async def asimilarity_search(question: str, k: int = 3) -> list[Document]:
     """语义搜索"""
-    docs = await vector_store.asimilarity_search(question, k)
+    docs = await get_vector_store().asimilarity_search(question, k)
     return docs
 
 
@@ -104,7 +104,7 @@ def parent_search(doc: Document) -> list[Document]:
     if not parent_id:
         raise ValueError("缺少父块ID")
 
-    result = vector_store.get(
+    result = get_vector_store().get(
         where={
             "$and": [
                 {"chunk_type": "parent"},

@@ -9,7 +9,7 @@ def get_postgres_saver(**kwargs):
         raise Exception("缺少数据库连接信息")
 
     # 创建连接池
-    pool = ConnectionPool(
+    conn = ConnectionPool(
         db_url,
         min_size=2,  # 最小连接数[reference:6]
         max_size=10,  # 最大连接数[reference:7][reference:8]
@@ -19,7 +19,7 @@ def get_postgres_saver(**kwargs):
             # "row_factory": dict_row  # 如果遇到类型问题可以尝试开启[reference:13]
         },
     )
-    kwargs["pool"] = pool
+    kwargs["conn"] = conn
     # 使用连接池创建检查点器（全局单例）
     checkpointer = PostgresSaver(**kwargs)
     checkpointer.setup()  # 首次运行创建表
