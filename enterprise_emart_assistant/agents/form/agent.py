@@ -8,7 +8,7 @@ from langgraph.prebuilt import ToolNode
 from sqlalchemy import True_
 import stamina
 from agents.base import BaseAgent
-from llms.factory import get_default_llm, get_opus_llm
+from llms.factory import get_default_llm, get_master_llm
 from agents.form.state import FormState
 from langchain.tools import BaseTool
 from pydantics.decision import AIDecision
@@ -28,7 +28,7 @@ class FormDataAgent(BaseAgent):
 
     def get_tools_llm(self, opus: bool = False, **overrides) -> BaseChatModel:
         return (
-            get_opus_llm(**overrides) if opus else get_default_llm(**overrides)
+            get_master_llm(**overrides) if opus else get_default_llm(**overrides)
         ).bind_tools(self.get_tools(), strict=True)
 
     def get_checkpointer(self) -> None:
@@ -103,7 +103,7 @@ class FormDataAgent(BaseAgent):
             + self.get_decisio_system_prompt()
         )
 
-        llm = get_opus_llm(response_format={"type": "json_object"})
+        llm = get_master_llm(response_format={"type": "json_object"})
         structured_llm = llm.with_structured_output(AIDecision, method="json_mode")
 
         try:

@@ -3,14 +3,8 @@ from configs.config import config
 from llms.base import LLMConfig
 from langchain_deepseek import ChatDeepSeek
 from langchain_core.language_models.chat_models import BaseChatModel
-from langfuse.langchain import CallbackHandler
 
 ProviderType = Literal["deepseek"]
-# LANGFUSE_HANDLER = CallbackHandler(
-#     secret_key=config.get("LANGFUSE_SECRET_KEY"),
-#     public_key=config.get("LANGFUSE_PUBLIC_KEY"),
-#     host=config.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-# )
 
 
 def _load_config_from_env(provider: str) -> LLMConfig:
@@ -19,7 +13,7 @@ def _load_config_from_env(provider: str) -> LLMConfig:
         base_url=config.get(f"{provider}_BASE_URL", ""),
         default_model=config.get(f"{provider}_DEFAULT_MODEL", ""),
         opus_model=config.get(
-            f"{provider}_OPUS_MODEL", config.get(f"{provider}_DEFAULT_MODEL", "")
+            f"{provider}_MASTER_MODEL", config.get(f"{provider}_DEFAULT_MODEL", "")
         ),
         temperature=float(config.get(f"{provider}_TEMPERATURE", 0.7)),
         timeout=int(config.get(f"{provider}_TIMEOUT", 60)),
@@ -48,10 +42,6 @@ def create_llm(
     if model_level == "opus":
         model = llm_config.opus_model
 
-    # response_format = {"type": "text"}
-    # if overrides.get("response_format", None) is not None:
-    #     response_format = overrides["response_format"]
-
     llm = None
     if provider == "deepseek":
         llm = ChatDeepSeek(
@@ -63,12 +53,11 @@ def create_llm(
     else:
         raise ValueError(f"不支持的 LLM 提供商: {provider}")
 
-    # return llm.with_config(callbacks=[LANGFUSE_HANDLER])
     return llm
 
 
 _default_llm: BaseChatModel = None
-_opus_llm: BaseChatModel = None
+_master_llm: BaseChatModel = None
 
 
 def get_default_llm(**overrides) -> BaseChatModel:
@@ -82,11 +71,11 @@ def get_default_llm(**overrides) -> BaseChatModel:
     return _default_llm.bind(**overrides)
 
 
-def get_opus_llm(**overrides) -> BaseChatModel:
+def get_master_llm(**overrides) -> BaseChatModel:
     """
     旗舰模型
     """
 
-    if _opus_llm is None:
-        _opus_llm = create_llm(None, "opus")
-    return _opus_llm.bind(**overrides)
+    if _master_llm is None:
+        _master_llm = create_llm(None, "opus")
+    return _master_llm.bind(**overrides)
