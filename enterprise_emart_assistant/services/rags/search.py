@@ -1,5 +1,5 @@
 from langchain_core.documents import Document
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 from db.rerank.factory import reranker
 
 

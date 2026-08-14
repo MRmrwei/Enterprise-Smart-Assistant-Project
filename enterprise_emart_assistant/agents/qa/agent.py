@@ -1,7 +1,7 @@
 from langchain.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph
 from agents.qa.state import QaState
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 from agents.base import BaseAgent
 from graphs.state import AgentState
 from llms.factory import get_default_llm

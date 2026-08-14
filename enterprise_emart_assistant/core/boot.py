@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 import stamina
+from db.savers.saver import get_saver
 from tools.base import tools_container
 from core.context import context
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -14,9 +15,12 @@ async def lifespan(app: FastAPI):
 
     try:
         await init_mcp_tools()
+        get_saver()
     except Exception as e:
         # 处理其他异常
-        raise Exception(f"MCP 启动失败: {e}")
+        raise Exception(f"启动失败: {e}")
+
+    
 
     init_routes(app)
 

@@ -1,17 +1,12 @@
-from langchain.agents import create_agent
-from langgraph.graph import END, StateGraph
+from langgraph.graph import StateGraph
 from graphs.state import AgentState
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-from llms.factory import get_default_llm
 from nodes.combine import combine_node
 from nodes.router import route_node
 from nodes.intention import intention_node
-from langgraph.checkpoint.memory import InMemorySaver
-from pydantics.decision import AIDecision
-from pydantics.intentions import Intention
 from langchain_core.messages import HumanMessage, AIMessage
 from agents.list import agents
 from langgraph.config import get_stream_writer
+from db.savers.saver import get_saver
 
 
 def init_node(state: AgentState):
@@ -60,11 +55,8 @@ def build_graph():
     builder.add_edge("combine", "completed")
     builder.set_finish_point("completed")
 
-    # ✅ 创建带允许列表的序列化器
-    serde = JsonPlusSerializer(allowed_msgpack_modules=[Intention, AIDecision])
-
     # ✅ 使用自定义序列化器初始化 checkpointer
-    checkpointer = InMemorySaver(serde=serde)
+    checkpointer = get_saver()
 
     return builder.compile(checkpointer=checkpointer)
 

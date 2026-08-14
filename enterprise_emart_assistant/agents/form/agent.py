@@ -16,8 +16,7 @@ from pydantics.intentions import Intention
 from tools.base import tools_container
 from tools.forms import leave_skills
 from langchain_core.language_models.chat_models import BaseChatModel
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from db.savers.saver import get_saver
 from langgraph.config import get_stream_writer
 
 
@@ -32,10 +31,8 @@ class FormDataAgent(BaseAgent):
             get_opus_llm(**overrides) if opus else get_default_llm(**overrides)
         ).bind_tools(self.get_tools(), strict=True)
 
-    # def get_checkpointer(self) -> None:
-    #     serde = JsonPlusSerializer(allowed_msgpack_modules=[AIDecision])
-    #     # ✅ 使用自定义序列化器初始化 checkpointer
-    #     return InMemorySaver(serde=serde)
+    def get_checkpointer(self) -> None:
+        return get_saver()
 
     @classmethod
     def get_description(cls) -> str:
@@ -44,8 +41,6 @@ class FormDataAgent(BaseAgent):
     def get_state(self):
         return FormState
 
-    # def get_checkpointer(self) -> None:
-    #     return InMemorySaver()
     @classmethod
     def get_key(cls) -> str:
         return "form_data"

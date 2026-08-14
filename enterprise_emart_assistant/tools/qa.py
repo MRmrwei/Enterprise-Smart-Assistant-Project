@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 from llms.factory import get_default_llm
 
 
