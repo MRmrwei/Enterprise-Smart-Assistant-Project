@@ -4,7 +4,6 @@ from langchain.tools import BaseTool
 from langgraph.prebuilt import tools_condition
 
 from tools.forms import form_all_tools_skills
-from tools.qa import qa_query
 
 
 class ToolContainer:
@@ -16,7 +15,7 @@ class ToolContainer:
 
     def _init_register(self):
         self.register(
-            form_all_tools_skills + [qa_query]
+            form_all_tools_skills
         )
 
     @singledispatchmethod
@@ -59,6 +58,7 @@ class ToolContainer:
             elif isinstance(tool, BaseTool) and tool.name in self.tools:
                 tools_list.append(self.tools[tool.name])
             else:
+                return []
                 raise ValueError(f"Invalid tool type {tool}")
         return tools_list
 

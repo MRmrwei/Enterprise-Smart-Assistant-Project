@@ -5,7 +5,7 @@ from click import prompt
 from langchain.messages import HumanMessage, SystemMessage
 from langchain_core.documents import Document
 import time
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llms.factory import get_default_llm
 from langchain_community.document_loaders import TextLoader

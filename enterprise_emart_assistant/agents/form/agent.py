@@ -8,7 +8,7 @@ from langgraph.prebuilt import ToolNode
 from sqlalchemy import True_
 import stamina
 from agents.base import BaseAgent
-from llms.factory import get_default_llm, get_opus_llm
+from llms.factory import get_default_llm, get_master_llm
 from agents.form.state import FormState
 from langchain.tools import BaseTool
 from pydantics.decision import AIDecision
@@ -16,8 +16,7 @@ from pydantics.intentions import Intention
 from tools.base import tools_container
 from tools.forms import leave_skills
 from langchain_core.language_models.chat_models import BaseChatModel
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from db.savers.saver import get_saver
 from langgraph.config import get_stream_writer
 
 
@@ -29,13 +28,11 @@ class FormDataAgent(BaseAgent):
 
     def get_tools_llm(self, opus: bool = False, **overrides) -> BaseChatModel:
         return (
-            get_opus_llm(**overrides) if opus else get_default_llm(**overrides)
+            get_master_llm(**overrides) if opus else get_default_llm(**overrides)
         ).bind_tools(self.get_tools(), strict=True)
 
-    # def get_checkpointer(self) -> None:
-    #     serde = JsonPlusSerializer(allowed_msgpack_modules=[AIDecision])
-    #     # ✅ 使用自定义序列化器初始化 checkpointer
-    #     return InMemorySaver(serde=serde)
+    def get_checkpointer(self) -> None:
+        return get_saver()
 
     @classmethod
     def get_description(cls) -> str:
@@ -44,8 +41,6 @@ class FormDataAgent(BaseAgent):
     def get_state(self):
         return FormState
 
-    # def get_checkpointer(self) -> None:
-    #     return InMemorySaver()
     @classmethod
     def get_key(cls) -> str:
         return "form_data"
@@ -108,7 +103,7 @@ class FormDataAgent(BaseAgent):
             + self.get_decisio_system_prompt()
         )
 
-        llm = get_opus_llm(response_format={"type": "json_object"})
+        llm = get_master_llm(response_format={"type": "json_object"})
         structured_llm = llm.with_structured_output(AIDecision, method="json_mode")
 
         try:

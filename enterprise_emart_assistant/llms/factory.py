@@ -3,10 +3,8 @@ from configs.config import config
 from llms.base import LLMConfig
 from langchain_deepseek import ChatDeepSeek
 from langchain_core.language_models.chat_models import BaseChatModel
-from langfuse.langchain import CallbackHandler
 
 ProviderType = Literal["deepseek"]
-
 
 
 def _load_config_from_env(provider: str) -> LLMConfig:
@@ -14,8 +12,8 @@ def _load_config_from_env(provider: str) -> LLMConfig:
         api_key=config.get(f"{provider}_API_KEY", ""),
         base_url=config.get(f"{provider}_BASE_URL", ""),
         default_model=config.get(f"{provider}_DEFAULT_MODEL", ""),
-        opus_model=config.get(
-            f"{provider}_OPUS_MODEL", config.get(f"{provider}_DEFAULT_MODEL", "")
+        master_model=config.get(
+            f"{provider}_MASTER_MODEL", config.get(f"{provider}_DEFAULT_MODEL", "")
         ),
         temperature=float(config.get(f"{provider}_TEMPERATURE", 0.7)),
         timeout=int(config.get(f"{provider}_TIMEOUT", 60)),
@@ -41,15 +39,11 @@ def create_llm(
     llm_config = _load_config_from_env(provider)
 
     model = llm_config.default_model
-    if model_level == "opus":
-        model = llm_config.opus_model
-
-    # response_format = {"type": "text"}
-    # if overrides.get("response_format", None) is not None:
-    #     response_format = overrides["response_format"]
+    if model_level == "master":
+        model = llm_config.master_model
 
     llm = None
-    if provider == "deepseek":
+    if provider.lower() == "deepseek":
         llm = ChatDeepSeek(
             model=model,
             api_key=llm_config.api_key,
@@ -59,30 +53,29 @@ def create_llm(
     else:
         raise ValueError(f"不支持的 LLM 提供商: {provider}")
 
-    # return llm.with_config(callbacks=[LANGFUSE_HANDLER])
     return llm
 
 
-_default_llm: BaseChatModel = None
-_opus_llm: BaseChatModel = None
+DEFAULT_LLM: BaseChatModel = None
+MASTER_LLM: BaseChatModel = None
 
 
 def get_default_llm(**overrides) -> BaseChatModel:
     """
     默认模型
     """
+    global DEFAULT_LLM
+    if DEFAULT_LLM is None:
+        DEFAULT_LLM = create_llm(None)
 
-    if _default_llm is None:
-        _default_llm = create_llm(None)
-
-    return _default_llm.bind(**overrides)
+    return DEFAULT_LLM.bind(**overrides)
 
 
-def get_opus_llm(**overrides) -> BaseChatModel:
+def get_master_llm(**overrides) -> BaseChatModel:
     """
     旗舰模型
     """
-
-    if _opus_llm is None:
-        _opus_llm = create_llm(None, "opus")
-    return _opus_llm.bind(**overrides)
+    global MASTER_LLM
+    if MASTER_LLM is None:
+        MASTER_LLM = create_llm(None, "master")
+    return MASTER_LLM.bind(**overrides)

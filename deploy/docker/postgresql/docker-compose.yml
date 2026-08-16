@@ -1,0 +1,13 @@
+services:
+  pgsql:
+    image: postgres:15-alpine        # 轻量级 PostgreSQL 镜像
+    container_name: pgsql
+    environment:
+      POSTGRES_USER: root          # 数据库用户名
+      POSTGRES_PASSWORD: 123456  # 密码
+      POSTGRES_DB: ai              # 默认数据库名
+    ports:
+      - "5432:5432"                  # 宿主机端口:容器端口
+    volumes:
+      - E:\zhujiawei\docker-vm\pg:/var/lib/postgresql/data  # 数据持久化卷
+    restart: unless-stopped

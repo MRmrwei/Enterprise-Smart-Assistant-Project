@@ -2,7 +2,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 import time
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 import random
 
 

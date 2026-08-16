@@ -11,10 +11,10 @@ class BaseAgent(ABC):
     @property
     def graph(self) -> CompiledStateGraph:
 
-        if self._graph is not None:
-            return self._graph
-        checkpointer = self.get_checkpointer() if self.get_checkpointer() else None
-        self._graph = self.build_graph().compile(checkpointer=checkpointer)
+        if self._graph is None:
+            self._graph = self.build_graph().compile(
+                checkpointer=self.get_checkpointer()
+            )
 
         return self._graph
 

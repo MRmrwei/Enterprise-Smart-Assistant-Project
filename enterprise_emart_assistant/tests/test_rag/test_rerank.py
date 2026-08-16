@@ -1,7 +1,7 @@
 import asyncio
 
 from db.rerank.ollama import OllamaReranker
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 
 
 def test_rerank():

@@ -1,7 +1,7 @@
 import bm25s
 
 from services.rags.search import bm25_search
-from db.vector import vector_store
+from db.vectors.vector import vector_store
 import jieba
 import re
 
