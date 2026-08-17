@@ -3,19 +3,17 @@ from typing import Optional
 from langgraph.graph.state import CompiledStateGraph, StateGraph
 from graphs.state import AgentState
 from langchain.messages import AnyMessage
+from db.savers.saver import get_saver
 
 
 class BaseAgent(ABC):
     _graph: Optional[CompiledStateGraph] = None
 
-    @property
-    def graph(self) -> CompiledStateGraph:
-
+    # ✅ 异步方法，接收外部传入的 checkpointer（避免内部重复获取）
+    async def get_graph(self) -> CompiledStateGraph:
         if self._graph is None:
-            self._graph = self.build_graph().compile(
-                checkpointer=self.get_checkpointer()
-            )
-
+            checkpointer = await self.get_checkpointer()
+            self._graph = self.build_graph().compile(checkpointer=checkpointer)
         return self._graph
 
     @abstractmethod
@@ -57,7 +55,7 @@ class BaseAgent(ABC):
         self.edge_nodes(builder)
         return builder
 
-    def get_checkpointer(self):
+    async def get_checkpointer(self):
         return None
 
     def set_agent_answer(self, state: AgentState, answer: str) -> AgentState:

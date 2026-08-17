@@ -4,5 +4,4 @@ from agents.employee.agent import EmployeeDataAgent
 from agents.form.agent import FormDataAgent
 from agents.qa.agent import QaAgent
 
-agents: list[BaseAgent] = [EmployeeDataAgent, ChatAgent, FormDataAgent,QaAgent]
-
+agents: list[BaseAgent] = [EmployeeDataAgent, ChatAgent, FormDataAgent, QaAgent]

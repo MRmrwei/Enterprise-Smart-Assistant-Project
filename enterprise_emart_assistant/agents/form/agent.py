@@ -31,8 +31,8 @@ class FormDataAgent(BaseAgent):
             get_master_llm(**overrides) if opus else get_default_llm(**overrides)
         ).bind_tools(self.get_tools(), strict=True)
 
-    def get_checkpointer(self) -> None:
-        return get_saver()
+    async def get_checkpointer(self) -> None:
+        return await get_saver()
 
     @classmethod
     def get_description(cls) -> str:

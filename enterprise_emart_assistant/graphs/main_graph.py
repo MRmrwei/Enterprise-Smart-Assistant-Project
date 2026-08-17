@@ -19,7 +19,7 @@ def init_node(state: AgentState):
     }
 
 
-def register_nodes(builder: StateGraph):
+async def register_nodes(builder: StateGraph):
 
     builder.add_node("init_node", init_node)
     builder.add_node("intention_node", intention_node)
@@ -29,7 +29,8 @@ def register_nodes(builder: StateGraph):
     # builder.add_node("verification", _verification_node)
 
     for agent in agents:
-        builder.add_node(agent.get_key(), agent().graph)
+        agent_cls = agent()
+        builder.add_node(agent.get_key(), await agent_cls.get_graph())
         builder.add_edge(agent.get_key(), "combine")
 
 
@@ -40,12 +41,12 @@ def completed_node(state: AgentState):
     writer = get_stream_writer()
     writer({"type": "answer", "content": answer})
 
-    return {"messages": [AIMessage(content=answer)]}
+    return {"messages": [AIMessage(content=answer)], "answer": answer}
 
 
-def build_graph():
+async def build_graph():
     builder = StateGraph(AgentState)
-    register_nodes(builder)
+    await register_nodes(builder)
 
     builder.set_entry_point("init_node")
     builder.add_edge("init_node", "intention_node")
@@ -56,9 +57,16 @@ def build_graph():
     builder.set_finish_point("completed")
 
     # ✅ 使用自定义序列化器初始化 checkpointer
-    checkpointer = get_saver()
-
+    checkpointer = await get_saver()
     return builder.compile(checkpointer=checkpointer)
 
 
-main_graph = build_graph()
+MAIN_GRAPH = None
+
+
+async def get_main_graph():
+    """异步获取编译后的主图（单例）"""
+    global MAIN_GRAPH
+    if MAIN_GRAPH is None:
+        MAIN_GRAPH = await build_graph()
+    return MAIN_GRAPH

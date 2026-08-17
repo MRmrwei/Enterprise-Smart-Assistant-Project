@@ -17,7 +17,7 @@ def create_vector_store():
 
 
 def get_vector_store():
-    global VVECTOR_STORE
+    global VECTOR_STORE
     if VECTOR_STORE is None:
         VECTOR_STORE = create_vector_store()
     return VECTOR_STORE

@@ -1,15 +1,20 @@
 import asyncio
 
 from enums.roles import Role
-from graphs.main_graph import main_graph
+from graphs.main_graph import get_main_graph
 from graphs.state import AgentState
 from langgraph.types import interrupt, Command
+import sys
 
+# Windows 必须使用 SelectorEventLoop
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 async def main():
 
     config = {"configurable": {"thread_id": "user1"}}
     is_interrupt = False
+    main_graph = await get_main_graph()
     while True:
         print("\n👋 欢迎使用深度 seek ！")
         q = input("问题: ")
@@ -39,7 +44,7 @@ async def main():
             is_interrupt = True
 
         answer = result["answer"]
-        if not result["answer"]:
+        if result["answer"] is not None:
             print(f"🤖 助手回复: {answer}")
 
 

@@ -6,9 +6,9 @@ from pydantics.intentions import Intention
 SAVER = None
 
 
-def get_saver():
+async def get_saver():
     global SAVER
     if SAVER is None:
         serde = JsonPlusSerializer(allowed_msgpack_modules=[Intention, AIDecision])
-        SAVER = create_saver(serde=serde)
+        SAVER = await create_saver(serde=serde)
     return SAVER

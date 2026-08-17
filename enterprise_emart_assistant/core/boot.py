@@ -15,12 +15,10 @@ async def lifespan(app: FastAPI):
 
     try:
         await init_mcp_tools()
-        get_saver()
+        await get_saver()
     except Exception as e:
         # 处理其他异常
         raise Exception(f"启动失败: {e}")
-
-    
 
     init_routes(app)
 
@@ -32,6 +30,7 @@ async def lifespan(app: FastAPI):
 def init_routes(app: FastAPI):
     import pkgutil
     import importlib
+
     package = importlib.import_module("app.controllers")
     for _, module_name, _ in pkgutil.iter_modules(package.__path__):
         module = importlib.import_module(f"app.controllers.{module_name}")

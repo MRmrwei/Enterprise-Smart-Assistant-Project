@@ -2,7 +2,7 @@ import asyncio
 import random
 import string
 from collections.abc import AsyncIterable
-from graphs.main_graph import main_graph
+from graphs.main_graph import get_main_graph
 from pydantics.response import SSEContent
 from langgraph.types import Command
 from db.caches.client import cache
@@ -23,6 +23,7 @@ class AgentService:
     async def Chat(
         self, state: dict | None = None, config: dict | None = None
     ) -> AsyncIterable[SSEContent]:
+        main_graph = await get_main_graph()
         """
         处理一轮对话的主入口。
 

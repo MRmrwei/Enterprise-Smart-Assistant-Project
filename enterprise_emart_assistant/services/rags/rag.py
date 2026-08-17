@@ -2,7 +2,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 import time
-from db.vectors.vector import vector_store
+from db.vectors.vector import get_vector_store
 import random
 
 
@@ -37,7 +37,7 @@ class RagUploadService:
 
         # 存入向量数据库
         try:
-            res = vector_store.add_documents(docs)
+            res = get_vector_store().add_documents(docs)
         except Exception as e:
             print(e)
             raise e
